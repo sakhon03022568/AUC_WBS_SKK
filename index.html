@@ -48,7 +48,10 @@
       if (ov) ov.classList.add('hidden');
       var b = document.getElementById('errorBanner');
       var m = document.getElementById('errorBannerMsg');
-      if (b && m) { m.textContent = 'เกิดข้อผิดพลาดในสคริปต์ (บรรทัด ' + line + '): ' + msg; b.classList.remove('hidden'); }
+      if (b && m) {
+        m.textContent = 'เกิดข้อผิดพลาดในสคริปต์ (บรรทัด ' + line + '): ' + msg;
+        b.classList.remove('hidden');
+      }
     };
   </script>
 
@@ -67,9 +70,9 @@
           <span class="text-lg">🧾</span><span>ใบตัดงบ</span><span class="text-xs opacity-90">↗</span>
         </a>
         <span id="dataBadge" class="px-3 py-1.5 rounded-lg bg-black/20 text-purple-100 text-xs sm:text-sm border border-white/15">กำลังเชื่อมต่อ...</span>
-        <button onclick="fetchFromGoogleSheet()" class="px-3.5 py-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-pea-800 text-sm font-semibold transition flex items-center gap-1.5 shadow">🔄 รีเฟรชข้อมูลล่าสุด</button>
-        <button id="btnConfigSheet" onclick="openConfigModal()" class="hidden px-3.5 py-2 rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm font-medium transition border border-white/20">⚙️ ตั้งค่าคอลัมน์ชีต</button>
-        <button onclick="exportFilteredCsv()" class="px-3.5 py-2 rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm font-medium transition border border-white/20">📤 ส่งออก CSV</button>
+        <button type="button" onclick="fetchFromGoogleSheet()" class="px-3.5 py-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-pea-800 text-sm font-semibold transition flex items-center gap-1.5 shadow">🔄 รีเฟรชข้อมูลล่าสุด</button>
+        <button type="button" id="btnConfigSheet" onclick="openConfigModal()" class="hidden px-3.5 py-2 rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm font-medium transition border border-white/20">⚙️ ตั้งค่าคอลัมน์ชีต</button>
+        <button type="button" onclick="exportFilteredCsv()" class="px-3.5 py-2 rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm font-medium transition border border-white/20">📤 ส่งออก CSV</button>
       </div>
     </div>
   </header>
@@ -78,7 +81,7 @@
 
     <div id="errorBanner" class="hidden bg-rose-50 border border-rose-300 text-rose-800 rounded-xl p-4 text-sm flex items-start justify-between gap-3">
       <div><div class="font-bold">⚠️ เกิดข้อผิดพลาดในการเชื่อมต่อ Google Sheets</div><div id="errorBannerMsg" class="text-sm mt-1"></div></div>
-      <button onclick="this.parentElement.classList.add('hidden')" class="text-rose-500 font-bold text-lg">&times;</button>
+      <button type="button" onclick="this.parentElement.classList.add('hidden')" class="text-rose-500 font-bold text-lg">&times;</button>
     </div>
 
     <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-5 space-y-4">
@@ -89,7 +92,7 @@
         </div>
         <div class="flex items-center gap-2">
           <input id="searchBox" type="text" oninput="applyFiltersAndRender()" placeholder="ค้นหา WBS / คำอธิบาย..." class="px-3.5 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pea-600 w-60" />
-          <button onclick="clearAllFilters()" class="px-3.5 py-2 text-sm font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition">ล้างตัวกรองทั้งหมด</button>
+          <button type="button" onclick="clearAllFilters()" class="px-3.5 py-2 text-sm font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition">ล้างตัวกรองทั้งหมด</button>
         </div>
       </div>
 
@@ -212,15 +215,15 @@
           <h3 class="text-base font-bold text-slate-800 mt-1.5" id="matModalTitle"></h3>
           <p class="text-xs sm:text-sm text-slate-500 mt-0.5">ข้อมูลจากชีต <b>Sh1</b> • เงื่อนไข: <b>คอลัมน์ V &gt; 0</b> (ไม่แสดงประเภท 581, เลขพัสดุขึ้นต้นด้วย 9 และคำว่า METER) • <b>รวมยอดตามเลขพัสดุที่ตรงกัน</b></p>
         </div>
-        <button onclick="closeMaterialModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+        <button type="button" onclick="closeMaterialModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
       </div>
       <div id="matModalBody" class="overflow-y-auto flex-1 py-4"></div>
       <div class="pt-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
         <div class="flex items-center gap-3">
-          <button id="btnViewBudgetFromMat" class="text-sm font-semibold text-pea-700 hover:underline">ดูรายละเอียดงบประมาณของ WBS นี้ &rarr;</button>
-          <button id="btnMatConfigLink" onclick="closeMaterialModal(); openConfigModal();" class="hidden text-xs text-slate-500 hover:text-pea-700 underline">⚙️ ตั้งค่าคอลัมน์ Sh1</button>
+          <button type="button" id="btnViewBudgetFromMat" class="text-sm font-semibold text-pea-700 hover:underline">ดูรายละเอียดงบประมาณของ WBS นี้ &rarr;</button>
+          <button type="button" id="btnMatConfigLink" onclick="closeMaterialModal(); openConfigModal();" class="hidden text-xs text-slate-500 hover:text-pea-700 underline">⚙️ ตั้งค่าคอลัมน์ Sh1</button>
         </div>
-        <button onclick="closeMaterialModal()" class="px-4 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium">ปิดหน้าต่าง</button>
+        <button type="button" onclick="closeMaterialModal()" class="px-4 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium">ปิดหน้าต่าง</button>
       </div>
     </div>
   </div>
@@ -237,7 +240,7 @@
           </div>
           <p class="text-xs sm:text-sm text-slate-500 mt-1.5">เงื่อนไข: <b>คอลัมน์ V &gt; 0</b> (ไม่แสดงประเภท 581, เลขพัสดุขึ้นต้นด้วย 9 และคำว่า METER) • รวมยอดตามเลขพัสดุที่ตรงกัน</p>
         </div>
-        <button onclick="closeAggMaterialModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+        <button type="button" onclick="closeAggMaterialModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
       </div>
       <div id="aggToolbar" class="hidden pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div id="aggMoveFilterBar" class="flex flex-wrap items-center gap-1.5"></div>
@@ -249,7 +252,7 @@
       <div id="aggModalBody" class="overflow-y-auto flex-1 py-4"></div>
       <div class="pt-3 border-t border-slate-200 flex items-center justify-between">
         <div id="aggSelectedWbsPreview" class="text-xs text-slate-500 truncate max-w-2xl"></div>
-        <button onclick="closeAggMaterialModal()" class="px-4 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium shrink-0">ปิดหน้าต่าง</button>
+        <button type="button" onclick="closeAggMaterialModal()" class="px-4 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium shrink-0">ปิดหน้าต่าง</button>
       </div>
     </div>
   </div>
@@ -262,7 +265,7 @@
           <span class="text-sm font-mono font-bold text-pea-700 bg-purple-50 px-2.5 py-0.5 rounded" id="detWbs"></span>
           <h3 class="text-base font-bold text-slate-800 mt-1.5" id="detTitle"></h3>
         </div>
-        <button onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+        <button type="button" onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
       </div>
       <div id="detBody" class="space-y-3 text-sm"></div>
     </div>
@@ -273,7 +276,7 @@
     <div class="bg-white rounded-2xl shadow-xl max-w-xs w-full p-6">
       <div class="flex items-center justify-between mb-3">
         <h3 class="text-base font-bold text-slate-800">🔐 ยืนยันสิทธิ์ผู้ดูแลระบบ</h3>
-        <button onclick="closeAdminPinModal()" class="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+        <button type="button" onclick="closeAdminPinModal()" class="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
       </div>
       <form onsubmit="submitAdminPin(event)" class="space-y-3">
         <p class="text-xs text-slate-500">กรอกรหัสผ่านผู้ดูแลเพื่อเปิดปุ่มตั้งค่าคอลัมน์ชีต</p>
@@ -289,7 +292,7 @@
     <div class="bg-white rounded-2xl shadow-xl max-w-4xl w-full p-6 max-h-[92vh] overflow-y-auto">
       <div class="flex items-center justify-between mb-2">
         <h3 class="text-lg font-bold text-slate-800">ตั้งค่าจับคู่คอลัมน์จาก Google Sheets</h3>
-        <button onclick="closeConfigModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+        <button type="button" onclick="closeConfigModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
       </div>
       <p class="text-xs sm:text-sm text-slate-500 mb-4">ตั้งค่าได้เฉพาะเจ้าของระบบ เมื่อกดบันทึกแล้วทุกคนที่เปิดลิงก์จะใช้การตั้งค่านี้ร่วมกัน</p>
       <div class="flex flex-wrap items-center gap-4 text-xs sm:text-sm bg-slate-50 p-3 rounded-xl border border-slate-200 mb-4">
@@ -308,10 +311,10 @@
         <div id="mappingGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 text-xs mb-5"></div>
       </div>
       <div class="flex items-center justify-between pt-3 border-t border-slate-200">
-        <button onclick="resetAutoGuess()" class="px-3 py-2 text-xs font-semibold text-pea-700 bg-purple-50 hover:bg-purple-100 rounded-lg">↺ จับคู่อัตโนมัติใหม่ทั้งหมด</button>
+        <button type="button" onclick="resetAutoGuess()" class="px-3 py-2 text-xs font-semibold text-pea-700 bg-purple-50 hover:bg-purple-100 rounded-lg">↺ จับคู่อัตโนมัติใหม่ทั้งหมด</button>
         <div class="flex gap-2">
-          <button onclick="closeConfigModal()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">ยกเลิก</button>
-          <button id="btnSaveConfig" onclick="saveAndApplyConfig()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg shadow">บันทึกและแสดงผลทันที</button>
+          <button type="button" onclick="closeConfigModal()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">ยกเลิก</button>
+          <button type="button" id="btnSaveConfig" onclick="saveAndApplyConfig()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg shadow">บันทึกและแสดงผลทันที</button>
         </div>
       </div>
     </div>
@@ -321,14 +324,11 @@
     const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyWjJ2dd_inBfjGWgIrHOrRKRoskDDj7gLzbc4Gr2pp925_yxL9UXtwWTkuOS4IZjY2/exec';
 
     async function callGasApi(action, payload = {}) {
-      const url = new URL(GAS_API_URL);
-      url.searchParams.set('action', action);
-      if (payload && Object.keys(payload).length > 0) {
-        url.searchParams.set('payload', JSON.stringify(payload));
-      }
-
-      const res = await fetch(url.toString(), {
-        method: 'GET',
+      const bodyData = Object.assign({ action }, payload || {});
+      const res = await fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(bodyData),
         redirect: 'follow'
       });
 
@@ -688,6 +688,16 @@
     function selectDdOption(key, val) { ddFilters[key] = val; openDdKey = null; renderSearchableDropdown(key); applyFiltersAndRender(); }
     document.addEventListener('click', () => { if (openDdKey) { const p = openDdKey; openDdKey = null; renderSearchableDropdown(p); } });
 
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeMaterialModal();
+        closeAggMaterialModal();
+        closeDetailModal();
+        closeAdminPinModal();
+        closeConfigModal();
+      }
+    });
+
     function onSliderInput(key, bound) {
       const minEl = document.getElementById(`min_${key}`), maxEl = document.getElementById(`max_${key}`);
       let minV = Number(minEl.value), maxV = Number(maxEl.value);
@@ -1003,7 +1013,7 @@
         }).join('');
       }
       document.getElementById('chkSelectPage').checked = currentPageSlice.length > 0 && currentPageSlice.every(r => selectedWbsSet.has(r.wbs));
-      document.getElementById('paginationBar').innerHTML = `<span>หน้า ${currentPage} จาก ${totalPages}</span><div class="flex gap-1.5"><button onclick="goPage(1)" ${currentPage === 1 ? 'disabled' : ''} class="px-3 py-1 rounded border bg-white disabled:opacity-40">หน้าแรก</button><button onclick="goPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} class="px-3 py-1 rounded border bg-white disabled:opacity-40">ก่อนหน้า</button><button onclick="goPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''} class="px-3 py-1 rounded border bg-white disabled:opacity-40">ถัดไป</button><button onclick="goPage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''} class="px-3 py-1 rounded border bg-white disabled:opacity-40">สุดท้าย</button></div>`;
+      document.getElementById('paginationBar').innerHTML = `<span>หน้า ${currentPage} จาก ${totalPages}</span><div class="flex gap-1.5"><button type="button" onclick="goPage(1)" ${currentPage === 1 ? 'disabled' : ''} class="px-3 py-1 rounded border bg-white disabled:opacity-40">หน้าแรก</button><button type="button" onclick="goPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} class="px-3 py-1 rounded border bg-white disabled:opacity-40">ก่อนหน้า</button><button type="button" onclick="goPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''} class="px-3 py-1 rounded border bg-white disabled:opacity-40">ถัดไป</button><button type="button" onclick="goPage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''} class="px-3 py-1 rounded border bg-white disabled:opacity-40">สุดท้าย</button></div>`;
       updateTableActionButtons();
     }
 
