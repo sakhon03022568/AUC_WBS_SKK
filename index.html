@@ -321,11 +321,17 @@
     const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyWjJ2dd_inBfjGWgIrHOrRKRoskDDj7gLzbc4Gr2pp925_yxL9UXtwWTkuOS4IZjY2/exec';
 
     async function callGasApi(action, payload = {}) {
-      const res = await fetch(GAS_API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action, ...payload })
+      const url = new URL(GAS_API_URL);
+      url.searchParams.set('action', action);
+      if (payload && Object.keys(payload).length > 0) {
+        url.searchParams.set('payload', JSON.stringify(payload));
+      }
+
+      const res = await fetch(url.toString(), {
+        method: 'GET',
+        redirect: 'follow'
       });
+
       if (!res.ok) throw new Error('HTTP Error: ' + res.status);
       const text = await res.text();
       try {
