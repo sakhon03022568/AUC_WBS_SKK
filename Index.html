@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard งานก่อสร้าง (WBS) - กฟจ. สกลนคร / พรรณานิคม / อากาศอำนวย</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Sarabun', 'sans-serif'], display: ['Prompt', 'sans-serif'] },
+          colors: { pea: { 50:'#faf5ff', 100:'#f3e8ff', 600:'#74045f', 700:'#5e034d', 800:'#4a023d' } }
+        }
+      }
+    };
+  </script>
+  <style>
+    body { font-family: 'Sarabun', sans-serif; background-color: #f1f5f9; }
+    h1, h2, h3, h4, .font-display { font-family: 'Prompt', sans-serif; }
+    th.sortable { cursor: pointer; user-select: none; }
+    th.sortable:hover { background-color: #e2e8f0; }
+    .dual-slider-wrap { position: relative; height: 28px; display: flex; align-items: center; }
+    .dual-slider-track { position: absolute; left: 0; right: 0; height: 6px; background: #e2e8f0; border-radius: 999px; }
+    .dual-slider-fill { position: absolute; height: 6px; border-radius: 999px; }
+    .dual-range { position: absolute; width: 100%; pointer-events: none; -webkit-appearance: none; appearance: none; background: transparent; margin: 0; }
+    .dual-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; pointer-events: auto; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 3px solid #74045f; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
+    .dual-range::-moz-range-thumb { pointer-events: auto; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 3px solid #74045f; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
+  </style>
+</head>
+<body class="text-slate-800 antialiased text-[15px]">
+
+  <div id="loadingOverlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl px-8 py-6 text-center max-w-sm w-full">
+      <div class="w-12 h-12 border-4 border-purple-200 border-t-pea-700 rounded-full animate-spin mx-auto mb-4"></div>
+      <div class="font-display font-bold text-slate-800 text-base">กำลังดึงข้อมูลล่าสุดจาก Google Sheets</div>
+      <div class="text-sm text-slate-500 mt-1">กรุณารอสักครู่...</div>
+    </div>
+  </div>
+
+  <script>
+    window.onerror = function(msg, url, line) {
+      var ov = document.getElementById('loadingOverlay');
+      if (ov) ov.classList.add('hidden');
+      var b = document.getElementById('errorBanner');
+      var m = document.getElementById('errorBannerMsg');
+      if (b && m) { m.textContent = 'เกิดข้อผิดพลาดในสคริปต์ (บรรทัด ' + line + '): ' + msg; b.classList.remove('hidden'); }
+    };
+  </script>
+
+  <header class="bg-gradient-to-r from-pea-800 via-pea-700 to-pea-600 text-white shadow-lg">
+    <div class="max-w-[1440px] mx-auto px-4 sm:px-6 py-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div id="wbsLogoBtn" ondblclick="openAdminPinModal()" title="Dashboard WBS" class="w-12 h-12 rounded-xl bg-amber-400 text-pea-800 flex items-center justify-center font-display font-bold text-lg shadow select-none cursor-default">WBS</div>
+        <div>
+          <h1 class="text-xl sm:text-2xl font-bold tracking-tight">Dashboard ติดตามงานก่อสร้าง (WBS)</h1>
+          <p class="text-xs sm:text-sm text-purple-100">กฟจ. สกลนคร • กฟส. พรรณานิคม • กฟส. อากาศอำนวย</p>
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2.5">
+        <a href="https://script.google.com/macros/s/AKfycbz3xxp5KlSL8a7LZhIccxGT25PodsKE24GKUdViMh69gXMDfNV1Lf7ns_l2NiUg3d1U/exec" target="_blank" rel="noopener noreferrer"
+           class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 via-rose-500 to-pink-500 hover:from-orange-400 hover:via-rose-400 hover:to-pink-400 text-white text-base font-display font-bold transition transform hover:-translate-y-0.5 flex items-center gap-2 shadow-xl ring-2 ring-white/85">
+          <span class="text-lg">🧾</span><span>ใบตัดงบ</span><span class="text-xs opacity-90">↗</span>
+        </a>
+        <span id="dataBadge" class="px-3 py-1.5 rounded-lg bg-black/20 text-purple-100 text-xs sm:text-sm border border-white/15">กำลังเชื่อมต่อ...</span>
+        <button onclick="fetchFromGoogleSheet()" class="px-3.5 py-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-pea-800 text-sm font-semibold transition flex items-center gap-1.5 shadow">🔄 รีเฟรชข้อมูลล่าสุด</button>
+        <button id="btnConfigSheet" onclick="openConfigModal()" class="hidden px-3.5 py-2 rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm font-medium transition border border-white/20">⚙️ ตั้งค่าคอลัมน์ชีต</button>
+        <button onclick="exportFilteredCsv()" class="px-3.5 py-2 rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm font-medium transition border border-white/20">📤 ส่งออก CSV</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-[1440px] mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <div id="errorBanner" class="hidden bg-rose-50 border border-rose-300 text-rose-800 rounded-xl p-4 text-sm flex items-start justify-between gap-3">
+      <div><div class="font-bold">⚠️ เกิดข้อผิดพลาดในการเชื่อมต่อ Google Sheets</div><div id="errorBannerMsg" class="text-sm mt-1"></div></div>
+      <button onclick="this.parentElement.classList.add('hidden')" class="text-rose-500 font-bold text-lg">&times;</button>
+    </div>
+
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-5 space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <span class="text-pea-700 font-bold text-lg font-display">ตัวกรองข้อมูล (8 เงื่อนไข + ช่วงเปอร์เซ็นต์เบิก)</span>
+          <span id="activeFilterCount" class="hidden text-xs px-2.5 py-0.5 rounded-full bg-pea-100 text-pea-700 font-semibold"></span>
+        </div>
+        <div class="flex items-center gap-2">
+          <input id="searchBox" type="text" oninput="applyFiltersAndRender()" placeholder="ค้นหา WBS / คำอธิบาย..." class="px-3.5 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pea-600 w-60" />
+          <button onclick="clearAllFilters()" class="px-3.5 py-2 text-sm font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition">ล้างตัวกรองทั้งหมด</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50/80 p-4 rounded-xl border border-slate-200/80">
+        <div><label class="block text-sm font-bold text-slate-700 mb-2">1. งานปี พ.ศ. (คอลัมน์ U)</label><div id="btnGroupYear" class="flex flex-wrap gap-2"></div></div>
+        <div><label class="block text-sm font-bold text-slate-700 mb-2">2. กฟฟ.</label><div id="btnGroupOffice" class="flex flex-wrap gap-2"></div></div>
+        <div><label class="block text-sm font-bold text-slate-700 mb-2">3. สถานะระบบ (ย่อ)</label><div id="btnGroupSysStatus" class="flex flex-wrap gap-2"></div></div>
+        <div><label class="block text-sm font-bold text-slate-700 mb-2">4. ดำเนินการโดย</label><div id="btnGroupExecBy" class="flex flex-wrap gap-2"></div></div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <div><label class="block text-sm font-bold text-slate-700 mb-1.5">5. งบ</label><div id="dd_budget" class="searchable-dd relative"></div></div>
+        <div><label class="block text-sm font-bold text-slate-700 mb-1.5">6. แผนก</label><div id="dd_dept" class="searchable-dd relative"></div></div>
+        <div><label class="block text-sm font-bold text-slate-700 mb-1.5">7. ผู้ควบคุมงาน</label><div id="dd_supervisor" class="searchable-dd relative"></div></div>
+        <div><label class="block text-sm font-bold text-slate-700 mb-1.5">8. ผู้รับจ้าง</label><div id="dd_contractor" class="searchable-dd relative"></div></div>
+      </div>
+
+      <div id="slidersContainer" class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t border-slate-200"></div>
+    </section>
+
+    <section class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-base sm:text-lg font-bold text-slate-800">จำนวนงานตามสถานะระบบ (REL / TECO / CLSD)</h2>
+        <span class="text-xs sm:text-sm text-slate-500">คลิกที่การ์ดเพื่อกรองดูเฉพาะสถานะนั้น</span>
+      </div>
+      <div id="statusCards3" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+          <div>
+            <h3 class="font-bold text-slate-800 text-base sm:text-lg">กราฟเปรียบเทียบจำนวนงานตามผู้รับจ้าง</h3>
+            <p class="text-xs sm:text-sm text-slate-500">นับจำนวน WBS แบบไม่ซ้ำ • คลิกที่แท่งกราฟเพื่อกรองดูงานของผู้รับจ้างรายนั้น</p>
+          </div>
+          <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-lg self-start sm:self-auto">
+            <button type="button" id="chartModeBtn_contractor" onclick="setChartMode('contractor')" class="px-3 py-1 rounded-md text-xs font-semibold transition bg-pea-700 text-white shadow-sm">เรียงตามผู้รับจ้าง</button>
+            <button type="button" id="chartModeBtn_office" onclick="setChartMode('office')" class="px-3 py-1 rounded-md text-xs font-semibold transition text-slate-600 hover:text-slate-900">เทียบ 3 กฟฟ. ตามผู้รับจ้าง</button>
+          </div>
+        </div>
+        <div class="max-h-[460px] overflow-y-auto pr-1">
+          <div id="chartHeightWrapper" style="height:300px;"><canvas id="mainBarChart"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="space-y-2.5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+          <h2 class="text-base sm:text-lg font-bold text-slate-800">สรุปงบประมาณคงเหลือ</h2>
+          <span id="uniqueWbsSummaryText" class="text-xs sm:text-sm px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700 font-semibold">ทั้งหมด 0 WBS</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" onclick="selectTopN(4)" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-purple-50 hover:bg-purple-100 text-pea-800 border border-purple-200 transition">☑ เลือก 4 งานบนสุด</button>
+          <button type="button" onclick="selectAllInPage()" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition">เลือกทั้งหน้านี้</button>
+          <button type="button" id="btnClearSelection" onclick="clearRowSelection()" class="hidden px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition">✕ ล้างที่เลือก (แสดงทั้งหมด)</button>
+        </div>
+      </div>
+      <div id="budgetCards5" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"></div>
+    </section>
+
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="p-4 sm:p-5 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div>
+          <h3 class="font-bold text-slate-800 text-lg">ตารางรายละเอียดงาน WBS (แสดงแบบไม่ซ้ำ)</h3>
+          <p id="tableInfo" class="text-xs sm:text-sm text-slate-500">แสดง 0 รายการ</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 text-sm">
+          <button type="button" id="btnShowMaterialSummary" onclick="openAggregatedMaterialModal()" class="px-3.5 py-2 rounded-lg font-semibold bg-teal-600 hover:bg-teal-700 text-white shadow-sm transition flex items-center gap-1.5">
+            <span>📦</span><span id="lblBtnMatSummary">แสดงความต้องการพัสดุ</span>
+          </button>
+          <button type="button" id="btnToggleShowSelected" onclick="toggleShowOnlySelected()" class="px-3.5 py-2 rounded-lg font-semibold bg-white hover:bg-purple-50 text-pea-800 border border-pea-600 shadow-sm transition flex items-center gap-1.5">
+            <span>👁️</span><span id="lblBtnShowSelected">แสดง WBS ที่เลือก</span>
+          </button>
+          <button type="button" id="btnToggleCompletedMat" onclick="toggleCompletedMaterials()" class="px-3.5 py-2 rounded-lg font-semibold bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-600 shadow-sm transition flex items-center gap-1.5">
+            <span>✅</span><span id="lblBtnCompletedMat">งานที่เบิกพัสดุครบแล้ว</span>
+          </button>
+          <div class="flex items-center gap-1.5 text-slate-600 ml-1">
+            <span>แสดงหน้าละ:</span>
+            <select id="pageSizeSelect" onchange="currentPage=1; renderTable();" class="px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white">
+              <option value="25">25</option><option value="50" selected>50</option><option value="100">100</option><option value="99999">ทั้งหมด</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-100 text-slate-700 text-sm font-semibold border-b border-slate-200">
+              <th class="py-3 px-3 w-10 text-center"><input id="chkSelectPage" type="checkbox" onchange="toggleSelectPage(this.checked)" class="w-4 h-4 rounded text-pea-700 cursor-pointer" /></th>
+              <th class="py-3 px-3 w-16 text-center">ลำดับที่</th>
+              <th class="py-3 px-3 sortable whitespace-nowrap" onclick="sortBy('wbs')">WBS (กดดูวัสดุ Sh1) ↕</th>
+              <th class="py-3 px-3 sortable min-w-[240px]" onclick="sortBy('title')">คำอธิบาย ↕</th>
+              <th class="py-3 px-3 sortable whitespace-nowrap" onclick="sortBy('sysStatus')">สถานะระบบ (ย่อ) ↕</th>
+              <th class="py-3 px-3 sortable whitespace-nowrap" onclick="sortBy('userStatus')">สถานะผู้ใช้ ↕</th>
+              <th class="py-3 px-3 sortable text-right whitespace-nowrap" onclick="sortBy('matPct')">% เบิกค่าพัสดุ ↕</th>
+              <th class="py-3 px-3 sortable text-right whitespace-nowrap" onclick="sortBy('laborPct')">% เบิกค่าแรง ↕</th>
+              <th class="py-3 px-3 sortable text-right whitespace-nowrap" onclick="sortBy('sitePct')">% คชจ. หน้างาน ↕</th>
+              <th class="py-3 px-3 sortable text-right whitespace-nowrap" onclick="sortBy('remSiteExp')">คชจ.หน้างานคงเหลือ ↕</th>
+              <th class="py-3 px-3 sortable whitespace-nowrap" onclick="sortBy('execBy')">ดำเนินการโดย ↕</th>
+              <th class="py-3 px-3 sortable whitespace-nowrap" onclick="sortBy('supervisor')">ผู้ควบคุมงาน ↕</th>
+            </tr>
+          </thead>
+          <tbody id="wbsTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+        </table>
+      </div>
+      <div id="paginationBar" class="p-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-sm text-slate-600"></div>
+    </section>
+
+  </main>
+
+  <!-- Modal 1: Single WBS Materials -->
+  <div id="materialModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-5xl w-full p-6 max-h-[88vh] flex flex-col">
+      <div class="flex items-start justify-between gap-4 pb-3 border-b border-slate-200">
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-sm font-mono font-bold text-white bg-pea-700 px-2.5 py-0.5 rounded" id="matModalWbs"></span>
+            <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded" id="matModalBadge"></span>
+          </div>
+          <h3 class="text-base font-bold text-slate-800 mt-1.5" id="matModalTitle"></h3>
+          <p class="text-xs sm:text-sm text-slate-500 mt-0.5">ข้อมูลจากชีต <b>Sh1</b> • เงื่อนไข: <b>คอลัมน์ V &gt; 0</b> (ไม่แสดงประเภท 581, เลขพัสดุขึ้นต้นด้วย 9 และคำว่า METER) • <b>รวมยอดตามเลขพัสดุที่ตรงกัน</b></p>
+        </div>
+        <button onclick="closeMaterialModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+      </div>
+      <div id="matModalBody" class="overflow-y-auto flex-1 py-4"></div>
+      <div class="pt-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-3">
+          <button id="btnViewBudgetFromMat" class="text-sm font-semibold text-pea-700 hover:underline">ดูรายละเอียดงบประมาณของ WBS นี้ &rarr;</button>
+          <button id="btnMatConfigLink" onclick="closeMaterialModal(); openConfigModal();" class="hidden text-xs text-slate-500 hover:text-pea-700 underline">⚙️ ตั้งค่าคอลัมน์ Sh1</button>
+        </div>
+        <button onclick="closeMaterialModal()" class="px-4 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium">ปิดหน้าต่าง</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Aggregated Materials -->
+  <div id="aggMaterialModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-6xl w-full p-6 max-h-[90vh] flex flex-col">
+      <div class="flex items-start justify-between gap-4 pb-3 border-b border-slate-200">
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-sm font-bold text-white bg-teal-600 px-3 py-0.5 rounded-lg">📦 สรุปความต้องการพัสดุรวม (ชีต Sh1)</span>
+            <span class="text-xs font-semibold text-pea-800 bg-purple-100 px-2.5 py-0.5 rounded-full" id="aggWbsCountBadge"></span>
+            <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full" id="aggMatCountBadge"></span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-500 mt-1.5">เงื่อนไข: <b>คอลัมน์ V &gt; 0</b> (ไม่แสดงประเภท 581, เลขพัสดุขึ้นต้นด้วย 9 และคำว่า METER) • รวมยอดตามเลขพัสดุที่ตรงกัน</p>
+        </div>
+        <button onclick="closeAggMaterialModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+      </div>
+      <div id="aggToolbar" class="hidden pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div id="aggMoveFilterBar" class="flex flex-wrap items-center gap-1.5"></div>
+        <div class="flex items-center gap-2">
+          <input id="aggSearchInput" type="text" oninput="renderAggMaterialTable()" placeholder="ค้นหาเลขพัสดุ / ข้อความวัสดุ..." class="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600 w-56" />
+          <button type="button" onclick="exportAggMaterialsCsv()" class="px-3 py-1.5 text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg">📤 ส่งออก CSV</button>
+        </div>
+      </div>
+      <div id="aggModalBody" class="overflow-y-auto flex-1 py-4"></div>
+      <div class="pt-3 border-t border-slate-200 flex items-center justify-between">
+        <div id="aggSelectedWbsPreview" class="text-xs text-slate-500 truncate max-w-2xl"></div>
+        <button onclick="closeAggMaterialModal()" class="px-4 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium shrink-0">ปิดหน้าต่าง</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: WBS Budget Detail -->
+  <div id="detailModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6">
+      <div class="flex items-start justify-between mb-3">
+        <div>
+          <span class="text-sm font-mono font-bold text-pea-700 bg-purple-50 px-2.5 py-0.5 rounded" id="detWbs"></span>
+          <h3 class="text-base font-bold text-slate-800 mt-1.5" id="detTitle"></h3>
+        </div>
+        <button onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+      </div>
+      <div id="detBody" class="space-y-3 text-sm"></div>
+    </div>
+  </div>
+
+  <!-- Modal: Admin PIN -->
+  <div id="adminPinModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-xs w-full p-6">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-base font-bold text-slate-800">🔐 ยืนยันสิทธิ์ผู้ดูแลระบบ</h3>
+        <button onclick="closeAdminPinModal()" class="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+      </div>
+      <form onsubmit="submitAdminPin(event)" class="space-y-3">
+        <p class="text-xs text-slate-500">กรอกรหัสผ่านผู้ดูแลเพื่อเปิดปุ่มตั้งค่าคอลัมน์ชีต</p>
+        <input id="adminPinInput" type="password" required placeholder="รหัสผ่าน (PIN)" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pea-600 text-center tracking-widest" />
+        <p id="adminPinError" class="hidden text-xs text-rose-600 text-center"></p>
+        <button id="btnVerifyPin" type="submit" class="w-full py-2 bg-pea-700 hover:bg-pea-800 text-white text-sm font-semibold rounded-lg">ยืนยัน</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Column Mapping Configuration -->
+  <div id="configModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-4xl w-full p-6 max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-lg font-bold text-slate-800">ตั้งค่าจับคู่คอลัมน์จาก Google Sheets</h3>
+        <button onclick="closeConfigModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+      </div>
+      <p class="text-xs sm:text-sm text-slate-500 mb-4">ตั้งค่าได้เฉพาะเจ้าของระบบ เมื่อกดบันทึกแล้วทุกคนที่เปิดลิงก์จะใช้การตั้งค่านี้ร่วมกัน</p>
+      <div class="flex flex-wrap items-center gap-4 text-xs sm:text-sm bg-slate-50 p-3 rounded-xl border border-slate-200 mb-4">
+        <label class="inline-flex items-center gap-1.5 cursor-pointer font-medium"><input id="chkOnly3Offices" type="checkbox" checked class="rounded text-pea-700" /><span>แสดงเฉพาะ 3 กฟฟ. (สกลนคร / พรรณานิคม / อากาศอำนวย)</span></label>
+        <select id="dedupModeSelect" class="px-2.5 py-1.5 border rounded-lg bg-white">
+          <option value="first">เมื่อ WBS ซ้ำใน Sh2: ใช้ค่าแถวแรก (ไม่บวกงบซ้ำ)</option>
+          <option value="sum">เมื่อ WBS ซ้ำใน Sh2: บวกรวมงบคงเหลือทุกแถว</option>
+        </select>
+      </div>
+      <div class="bg-purple-50/70 border border-purple-200 rounded-xl p-4 mb-5">
+        <h4 class="text-sm font-bold text-pea-800 mb-2">ส่วนที่ 1: คอลัมน์ของชีต Sh1</h4>
+        <div id="sh1MappingGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs"></div>
+      </div>
+      <div>
+        <h4 class="text-sm font-bold text-slate-800 mb-2">ส่วนที่ 2: คอลัมน์ของชีต Sh2</h4>
+        <div id="mappingGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 text-xs mb-5"></div>
+      </div>
+      <div class="flex items-center justify-between pt-3 border-t border-slate-200">
+        <button onclick="resetAutoGuess()" class="px-3 py-2 text-xs font-semibold text-pea-700 bg-purple-50 hover:bg-purple-100 rounded-lg">↺ จับคู่อัตโนมัติใหม่ทั้งหมด</button>
+        <div class="flex gap-2">
+          <button onclick="closeConfigModal()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">ยกเลิก</button>
+          <button id="btnSaveConfig" onclick="saveAndApplyConfig()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg shadow">บันทึกและแสดงผลทันที</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const TARGET_OFFICES = ['กฟจ. สกลนคร', 'กฟส. พรรณานิคม', 'กฟส. อากาศอำนวย'];
+    const BUDGET_CARDS_CONFIG = [
+      { key: 'remLabor', label: '1. ค่าแรงคงเหลือ', color: 'border-blue-500', text: 'text-blue-700' },
+      { key: 'remSupervision', label: '2. ค่าควบคุมงานคงเหลือ', color: 'border-purple-600', text: 'text-pea-700' },
+      { key: 'remTransport', label: '3. ค่าขนส่งคงเหลือ', color: 'border-amber-500', text: 'text-amber-700' },
+      { key: 'remMisc', label: '4. ค่าเบ็ดเตล็ดคงเหลือ', color: 'border-teal-500', text: 'text-teal-700' },
+      { key: 'remSiteExp', label: '5. คชจ.หน้างานคงเหลือ', color: 'border-emerald-500', text: 'text-emerald-700' },
+    ];
+    const STATUS_CARD_CONFIG = [
+      { code: 'REL',  title: 'สถานะ REL',  desc: 'อยู่ระหว่างดำเนินการ / เปิดงาน', border: 'border-blue-500',    badgeBg: 'bg-blue-600',    text: 'text-blue-700',    ring: 'ring-blue-200' },
+      { code: 'TECO', title: 'สถานะ TECO', desc: 'ปิดงานทางเทคนิค / รอปิดงาน',   border: 'border-amber-500',   badgeBg: 'bg-amber-500',   text: 'text-amber-700',   ring: 'ring-amber-200' },
+      { code: 'CLSD', title: 'สถานะ CLSD', desc: 'ปิดงานสมบูรณ์แล้ว',              border: 'border-emerald-500', badgeBg: 'bg-emerald-600', text: 'text-emerald-700', ring: 'ring-emerald-200' },
+    ];
+    const DROPDOWN_CONFIG = [
+      { key: 'budget', boxId: 'dd_budget', allLabel: 'ทุกงบ' },
+      { key: 'dept', boxId: 'dd_dept', allLabel: 'ทุกแผนก' },
+      { key: 'supervisor', boxId: 'dd_supervisor', allLabel: 'ทุกคน' },
+      { key: 'contractor', boxId: 'dd_contractor', allLabel: 'ทั้งหมด' },
+    ];
+    const SLIDER_DEFS = [
+      { key: 'matPct', label: '% เบิกค่าพัสดุ', boxCls: 'bg-blue-50/60 border-blue-200/80', titleCls: 'text-blue-900', badgeCls: 'bg-blue-100 text-blue-800', fillCls: 'bg-blue-600' },
+      { key: 'laborPct', label: '% เบิกค่าแรง', boxCls: 'bg-purple-50/60 border-purple-200/80', titleCls: 'text-pea-800', badgeCls: 'bg-purple-100 text-pea-800', fillCls: 'bg-pea-700' },
+      { key: 'sitePct', label: '% คชจ. หน้างาน', boxCls: 'bg-emerald-50/60 border-emerald-200/80', titleCls: 'text-emerald-900', badgeCls: 'bg-emerald-100 text-emerald-800', fillCls: 'bg-emerald-600' },
+    ];
+    const FIELD_DEFS = [
+      { key: 'year', label: 'คอลัมน์ U (งานปี พ.ศ.)', hints: ['งานปี', 'ปี', 'พ.ศ.', 'year'], preferColIndex: 20 },
+      { key: 'office', label: 'กฟฟ.', hints: ['กฟฟ', 'การไฟฟ้า', 'หน่วยงาน', 'office'] },
+      { key: 'wbs', label: 'WBS', hints: ['wbs', 'รหัสงาน', 'รหัส wbs'] },
+      { key: 'title', label: 'คำอธิบาย', hints: ['คำอธิบาย', 'ชื่องาน', 'โครงการ', 'desc'] },
+      { key: 'sysStatus', label: 'สถานะระบบ (ย่อ)', hints: ['สถานะระบบ', 'ย่อ', 'sys'] },
+      { key: 'userStatus', label: 'คอลัมน์ N (สถานะผู้ใช้)', hints: ['สถานะผู้ใช้', 'user'], preferColIndex: 13 },
+      { key: 'execBy', label: 'ดำเนินการโดย', hints: ['ดำเนินการโดย', 'วิธีดำเนินการ', 'exec'] },
+      { key: 'budget', label: 'งบ', hints: ['งบ', 'ประเภทงบ', 'budget'] },
+      { key: 'dept', label: 'แผนก', hints: ['แผนก', 'สังกัด', 'dept'] },
+      { key: 'supervisor', label: 'ผู้ควบคุมงาน', hints: ['ผู้ควบคุมงาน', 'ผู้ควบคุม', 'supervisor'] },
+      { key: 'contractor', label: 'ผู้รับจ้าง', hints: ['ผู้รับจ้าง', 'คู่สัญญา', 'contractor'] },
+      { key: 'remLabor', label: 'ค่าแรงคงเหลือ', hints: ['ค่าแรงคงเหลือ', 'แรงคงเหลือ'] },
+      { key: 'remSupervision', label: 'ค่าควบคุมงานคงเหลือ', hints: ['ควบคุมงานคงเหลือ', 'ค่าควบคุม'] },
+      { key: 'remTransport', label: 'ค่าขนส่งคงเหลือ', hints: ['ขนส่งคงเหลือ', 'ค่าขนส่ง'] },
+      { key: 'remMisc', label: 'ค่าเบ็ดเตล็ดคงเหลือ', hints: ['เบ็ดเตล็ดคงเหลือ', 'เบ็ดเตล็ด'] },
+      { key: 'remSiteExp', label: 'คชจ.หน้างานคงเหลือ', hints: ['หน้างานคงเหลือ', 'คชจ.หน้างานคงเหลือ'] },
+      { key: 'matPct', label: 'เปอร์เซ็นต์เบิกค่าพัสดุ', hints: ['เบิกค่าพัสดุ', '% พัสดุ'] },
+      { key: 'laborPct', label: 'เปอร์เซ็นต์เบิกค่าแรง', hints: ['เบิกค่าแรง', '% ค่าแรง', '%เบิกค่าแรง'] },
+      { key: 'sitePct', label: 'เปอร์เซ็นต์ คชจ. หน้างาน', hints: ['คชจ. หน้างาน', 'คชจ.หน้างาน', '% คชจ'] },
+    ];
+    const SH1_FIELD_DEFS = [
+      { key: 'wbs', label: 'WBS (ชีต Sh1)', hints: ['wbs', 'องค์ประกอบ', 'รหัสงาน'] },
+      { key: 'matCode', label: 'เลขพัสดุ (Sh1)', hints: ['เลขพัสดุ', 'รหัสพัสดุ', 'รหัสวัสดุ', 'material'], exactHints: ['วัสดุ'] },
+      { key: 'matText', label: 'ข้อความวัสดุ (Sh1)', hints: ['ข้อความวัสดุ', 'ชื่อวัสดุ', 'รายการวัสดุ', 'รายละเอียดวัสดุ'] },
+      { key: 'moveType', label: 'ประเภทการเคลื่อนย้าย (Sh1 - E)', hints: ['ประเภทการเคลื่อนย้าย', 'การเคลื่อนย้าย', 'เคลื่อนย้าย', 'movement'], preferColIndex: 4 },
+      { key: 'colVVal', label: 'ค่าต้องการ > 0 (Sh1 - V)', hints: ['ต้องการ'], preferColIndex: 21 },
+      { key: 'mb52Val', label: 'ยอด MB52 (Sh1)', hints: ['ยอด mb52', 'mb52'] },
+      { key: 'matMoveStatus', label: 'การเคลื่อนย้ายพัสดุ (Sh1)', hints: ['การเคลื่อนย้ายพัสดุ', 'เคลื่อนย้ายพัสดุ'] },
+    ];
+    const CONTRACTOR_COLORS = ['#74045f','#2563eb','#059669','#d97706','#dc2626','#7c3aed','#0891b2','#db2777','#65a30d','#ea580c','#4f46e5','#0d9488','#b45309','#be185d','#475569'];
+
+    let isAdminUnlocked = false, adminPinCache = '';
+    let sheetHeaders = [], sheetRows = [], sh1Headers = [];
+    let activeConfig = { colMap: {}, sh1ColMap: {}, only3Offices: true, dedupMode: 'first' };
+    let rawRecords = [];
+    let btnFilters = { year: 'ALL', office: 'ALL', sysStatus: 'ALL', execBy: 'ALL' };
+    let ddFilters = { budget: 'ALL', dept: 'ALL', supervisor: 'ALL', contractor: 'ALL' };
+    let ddOptionsMap = { budget: [], dept: [], supervisor: [], contractor: [] };
+    let openDdKey = null;
+    let sliderFilters = { matPct: { min: 0, max: 100 }, laborPct: { min: 0, max: 100 }, sitePct: { min: 0, max: 100 } };
+    let currentFilteredUnique = [], currentSortedList = [], currentPageSlice = [];
+    let selectedWbsSet = new Set(), showOnlySelectedWbs = false;
+    let showOnlyCompletedMatWbs = false, pendingMatWbsSet = null;
+    let sortState = { key: 'wbs', asc: true }, currentPage = 1, barChart = null, chartMode = 'contractor';
+    let aggRawRows = [], aggMoveFilter = 'ALL', aggCurrentList = [];
+
+    const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    const parseNum = v => { if (typeof v === 'number') return isNaN(v) ? 0 : v; const n = parseFloat(String(v ?? '').replace(/[,฿%\s]/g, '')); return isNaN(n) ? 0 : n; };
+    const hasStatusCode = (st, code) => String(st ?? '').trim().toUpperCase().split(/\s+/).includes(code.toUpperCase());
+    const fmtMoney = n => '฿' + Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fmtPct = n => Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+    const fmtQty = n => { const num = Number(n || 0); return Number.isInteger(num) ? num.toLocaleString('th-TH') : num.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+    const colIndexToLetter = idx => { let s = '', n = idx; while (n >= 0) { s = String.fromCharCode((n % 26) + 65) + s; n = Math.floor(n / 26) - 1; } return s; };
+
+    function normalizeOfficeName(val) {
+      const s = String(val ?? '').trim();
+      if (s.includes('สกลนคร')) return 'กฟจ. สกลนคร';
+      if (s.includes('พรรณานิคม')) return 'กฟส. พรรณานิคม';
+      if (s.includes('อากาศอำนวย')) return 'กฟส. อากาศอำนวย';
+      return s || '-';
+    }
+
+    function autoGuessMap(headers, defs) {
+      const colMap = {};
+      defs.forEach(fd => {
+        if (fd.preferColIndex !== undefined && headers.length > fd.preferColIndex) { colMap[fd.key] = fd.preferColIndex; return; }
+        const exactLabel = headers.findIndex(h => String(h || '').trim() === fd.label);
+        if (exactLabel >= 0) { colMap[fd.key] = exactLabel; return; }
+        if (fd.exactHints && fd.exactHints.length) {
+          for (const ex of fd.exactHints) {
+            const idx = headers.findIndex(h => String(h || '').trim().toLowerCase() === ex.toLowerCase());
+            if (idx >= 0) { colMap[fd.key] = idx; return; }
+          }
+        }
+        let matched = -1;
+        for (const hint of fd.hints) {
+          const idx = headers.findIndex(h => String(h || '').toLowerCase().includes(hint.toLowerCase()));
+          if (idx >= 0) { matched = idx; break; }
+        }
+        colMap[fd.key] = matched;
+      });
+      return colMap;
+    }
+
+    function renderSliders() {
+      document.getElementById('slidersContainer').innerHTML = SLIDER_DEFS.map(s => `
+        <div class="${s.boxCls} border rounded-xl p-3.5">
+          <div class="flex items-center justify-between mb-1"><label class="text-sm font-bold ${s.titleCls}">${s.label}</label><span id="lbl_${s.key}" class="text-xs font-bold px-2 py-0.5 rounded ${s.badgeCls}">ทั้งหมด</span></div>
+          <div class="dual-slider-wrap"><div class="dual-slider-track"></div><div id="fill_${s.key}" class="dual-slider-fill ${s.fillCls}" style="left:0%;width:100%"></div><input id="min_${s.key}" type="range" min="0" max="100" step="1" value="0" oninput="onSliderInput('${s.key}','min')" class="dual-range" /><input id="max_${s.key}" type="range" min="0" max="100" step="1" value="100" oninput="onSliderInput('${s.key}','max')" class="dual-range" /></div>
+          <div class="flex items-center justify-between text-xs text-slate-600 mt-1 gap-2">
+            <div class="flex items-center gap-1"><span>ตั้งแต่:</span><input id="numMin_${s.key}" type="number" min="0" max="100" value="0" onchange="onNumInput('${s.key}','min')" class="w-14 px-1.5 py-0.5 border border-slate-300 rounded bg-white text-center font-semibold" />%</div>
+            <div class="flex items-center gap-1"><span>ถึง:</span><input id="numMax_${s.key}" type="number" min="0" max="100" value="100" onchange="onNumInput('${s.key}','max')" class="w-14 px-1.5 py-0.5 border border-slate-300 rounded bg-white text-center font-semibold" />%</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function unlockConfigUI() {
+      document.getElementById('btnConfigSheet').classList.remove('hidden');
+      document.getElementById('btnMatConfigLink').classList.remove('hidden');
+    }
+
+    function openAdminPinModal() {
+      if (isAdminUnlocked) { openConfigModal(); return; }
+      document.getElementById('adminPinInput').value = '';
+      document.getElementById('adminPinError').classList.add('hidden');
+      document.getElementById('adminPinModal').classList.replace('hidden', 'flex');
+      setTimeout(() => document.getElementById('adminPinInput').focus(), 50);
+    }
+
+    function closeAdminPinModal() { document.getElementById('adminPinModal').classList.replace('flex', 'hidden'); }
+
+    function submitAdminPin(e) {
+      e.preventDefault();
+      const pin = document.getElementById('adminPinInput').value.trim();
+      const btn = document.getElementById('btnVerifyPin'), errEl = document.getElementById('adminPinError');
+      errEl.classList.add('hidden'); btn.disabled = true; btn.textContent = 'กำลังตรวจสอบ...';
+      google.script.run
+        .withSuccessHandler(res => {
+          btn.disabled = false; btn.textContent = 'ยืนยัน';
+          if (res && res.ok) { isAdminUnlocked = true; adminPinCache = pin; unlockConfigUI(); closeAdminPinModal(); openConfigModal(); }
+          else { errEl.textContent = (res && res.error) ? res.error : 'รหัสผ่านไม่ถูกต้อง'; errEl.classList.remove('hidden'); }
+        })
+        .withFailureHandler(() => { btn.disabled = false; btn.textContent = 'ยืนยัน'; })
+        .verifyAdminPin(pin);
+    }
+
+    function fetchFromGoogleSheet() {
+      document.getElementById('loadingOverlay').classList.remove('hidden');
+      document.getElementById('errorBanner').classList.add('hidden');
+      pendingMatWbsSet = null; showOnlyCompletedMatWbs = false;
+      if (typeof google === 'undefined' || !google.script || !google.script.run) {
+        document.getElementById('loadingOverlay').classList.add('hidden');
+        showError('หน้านี้ต้องรันผ่าน Google Apps Script Web App');
+        return;
+      }
+      google.script.run
+        .withSuccessHandler(res => {
+          document.getElementById('loadingOverlay').classList.add('hidden');
+          if (!res || !res.ok) { showError((res && res.error) ? res.error : 'ไม่สามารถอ่านข้อมูลจาก Google Sheets ได้'); return; }
+          sheetHeaders = res.headers || []; sheetRows = res.rows || []; sh1Headers = res.sh1Headers || [];
+          if (res.isOwner) { isAdminUnlocked = true; unlockConfigUI(); }
+          const saved = res.savedConfig || {};
+          const guessedSh1 = autoGuessMap(sh1Headers, SH1_FIELD_DEFS);
+          const mergedSh1 = Object.assign({}, guessedSh1);
+          if (saved.sh1ColMap) { Object.keys(saved.sh1ColMap).forEach(k => { if (saved.sh1ColMap[k] >= 0) mergedSh1[k] = saved.sh1ColMap[k]; }); }
+          activeConfig = {
+            colMap: (saved.colMap && Object.keys(saved.colMap).length) ? saved.colMap : autoGuessMap(sheetHeaders, FIELD_DEFS),
+            sh1ColMap: mergedSh1,
+            only3Offices: saved.only3Offices !== undefined ? saved.only3Offices : true,
+            dedupMode: saved.dedupMode || 'first'
+          };
+          document.getElementById('dataBadge').textContent = `ชีตหลัก: ${res.tabName} • อัปเดต ${res.fetchedAt}`;
+          buildRecordsFromSheet();
+          if (isAdminUnlocked && (activeConfig.colMap.wbs === undefined || activeConfig.colMap.wbs < 0)) openConfigModal();
+        })
+        .withFailureHandler(err => {
+          document.getElementById('loadingOverlay').classList.add('hidden');
+          showError(err && err.message ? err.message : String(err));
+        })
+        .getSheetDashboardData();
+    }
+
+    function showError(msg) {
+      document.getElementById('errorBannerMsg').textContent = msg;
+      document.getElementById('errorBanner').classList.remove('hidden');
+    }
+
+    function buildRecordsFromSheet() {
+      const idxMap = activeConfig.colMap || {};
+      const getVal = (row, idx, def = '-') => (idx >= 0 && row[idx] !== undefined && String(row[idx]).trim() !== '') ? String(row[idx]).trim() : def;
+      let imported = sheetRows.map(r => {
+        const wbsVal = getVal(r, idxMap.wbs, '');
+        if (!wbsVal) return null;
+        return {
+          year: getVal(r, idxMap.year), office: normalizeOfficeName(getVal(r, idxMap.office)), wbs: wbsVal,
+          title: getVal(r, idxMap.title), sysStatus: getVal(r, idxMap.sysStatus), userStatus: getVal(r, idxMap.userStatus),
+          execBy: getVal(r, idxMap.execBy), budget: getVal(r, idxMap.budget), dept: getVal(r, idxMap.dept),
+          supervisor: getVal(r, idxMap.supervisor), contractor: getVal(r, idxMap.contractor),
+          remLabor: idxMap.remLabor >= 0 ? parseNum(r[idxMap.remLabor]) : 0,
+          remSupervision: idxMap.remSupervision >= 0 ? parseNum(r[idxMap.remSupervision]) : 0,
+          remTransport: idxMap.remTransport >= 0 ? parseNum(r[idxMap.remTransport]) : 0,
+          remMisc: idxMap.remMisc >= 0 ? parseNum(r[idxMap.remMisc]) : 0,
+          remSiteExp: idxMap.remSiteExp >= 0 ? parseNum(r[idxMap.remSiteExp]) : 0,
+          matPct: idxMap.matPct >= 0 ? parseNum(r[idxMap.matPct]) : 0,
+          laborPct: idxMap.laborPct >= 0 ? parseNum(r[idxMap.laborPct]) : 0,
+          sitePct: idxMap.sitePct >= 0 ? parseNum(r[idxMap.sitePct]) : 0,
+        };
+      }).filter(Boolean);
+
+      if (activeConfig.only3Offices) imported = imported.filter(item => TARGET_OFFICES.includes(item.office));
+      rawRecords = imported;
+      populateFilterOptions();
+      applyFiltersAndRender();
+    }
+
+    function openConfigModal() {
+      if (!isAdminUnlocked) { openAdminPinModal(); return; }
+      const sh1Opts = '<option value="-1">-- ไม่มีคอลัมน์นี้ --</option>' + sh1Headers.map((h, i) => `<option value="${i}">[${colIndexToLetter(i)}] ${escapeHtml(h || `คอลัมน์ ${i + 1}`)}</option>`).join('');
+      document.getElementById('sh1MappingGrid').innerHTML = SH1_FIELD_DEFS.map(fd => `<div><label class="block font-semibold text-pea-800 mb-1">${fd.label}</label><select id="cfg_sh1_${fd.key}" class="w-full p-1.5 border border-purple-300 rounded-lg bg-white text-xs">${sh1Opts}</select></div>`).join('');
+      SH1_FIELD_DEFS.forEach(fd => { const v = activeConfig.sh1ColMap[fd.key]; document.getElementById(`cfg_sh1_${fd.key}`).value = (v !== undefined && v < sh1Headers.length) ? v : -1; });
+
+      const sh2Opts = '<option value="-1">-- ไม่มีคอลัมน์นี้ --</option>' + sheetHeaders.map((h, i) => `<option value="${i}">[${colIndexToLetter(i)}] ${escapeHtml(h || `คอลัมน์ ${i + 1}`)}</option>`).join('');
+      document.getElementById('mappingGrid').innerHTML = FIELD_DEFS.map(fd => `<div><label class="block font-semibold text-slate-700 mb-1">${fd.label}</label><select id="cfg_${fd.key}" class="w-full p-1.5 border border-slate-300 rounded-lg bg-white text-xs">${sh2Opts}</select></div>`).join('');
+      FIELD_DEFS.forEach(fd => { const v = activeConfig.colMap[fd.key]; document.getElementById(`cfg_${fd.key}`).value = (v !== undefined && v < sheetHeaders.length) ? v : -1; });
+
+      document.getElementById('chkOnly3Offices').checked = activeConfig.only3Offices !== false;
+      document.getElementById('dedupModeSelect').value = activeConfig.dedupMode || 'first';
+      document.getElementById('configModal').classList.replace('hidden', 'flex');
+    }
+
+    function closeConfigModal() { document.getElementById('configModal').classList.replace('flex', 'hidden'); }
+
+    function resetAutoGuess() {
+      const g2 = autoGuessMap(sheetHeaders, FIELD_DEFS);
+      FIELD_DEFS.forEach(fd => { document.getElementById(`cfg_${fd.key}`).value = g2[fd.key] ?? -1; });
+      const g1 = autoGuessMap(sh1Headers, SH1_FIELD_DEFS);
+      SH1_FIELD_DEFS.forEach(fd => { document.getElementById(`cfg_sh1_${fd.key}`).value = g1[fd.key] ?? -1; });
+    }
+
+    function saveAndApplyConfig() {
+      const newColMap = {}; FIELD_DEFS.forEach(fd => { newColMap[fd.key] = Number(document.getElementById(`cfg_${fd.key}`).value); });
+      if (newColMap.wbs < 0) { alert('กรุณาเลือกคอลัมน์ WBS ของชีต Sh2 อย่างน้อย 1 คอลัมน์'); return; }
+      const newSh1Map = {}; SH1_FIELD_DEFS.forEach(fd => { newSh1Map[fd.key] = Number(document.getElementById(`cfg_sh1_${fd.key}`).value); });
+      activeConfig = { colMap: newColMap, sh1ColMap: newSh1Map, only3Offices: document.getElementById('chkOnly3Offices').checked, dedupMode: document.getElementById('dedupModeSelect').value };
+      pendingMatWbsSet = null; showOnlyCompletedMatWbs = false;
+
+      const btn = document.getElementById('btnSaveConfig');
+      btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
+      google.script.run
+        .withSuccessHandler(res => {
+          btn.disabled = false; btn.textContent = 'บันทึกและแสดงผลทันที';
+          if (res && !res.ok) { alert(res.error || 'ไม่มีสิทธิ์บันทึก'); return; }
+          closeConfigModal(); buildRecordsFromSheet();
+        })
+        .withFailureHandler(() => { btn.disabled = false; btn.textContent = 'บันทึกและแสดงผลทันที'; closeConfigModal(); buildRecordsFromSheet(); })
+        .saveDashboardConfig(JSON.stringify(activeConfig), adminPinCache);
+    }
+
+    function populateFilterOptions() {
+      renderFilterButtons();
+      DROPDOWN_CONFIG.forEach(cfg => {
+        const vals = [...new Set(rawRecords.map(r => (r[cfg.key] || '-').trim()))].sort((a, b) => a.localeCompare(b, 'th'));
+        ddOptionsMap[cfg.key] = vals;
+        if (ddFilters[cfg.key] !== 'ALL' && !vals.includes(ddFilters[cfg.key])) ddFilters[cfg.key] = 'ALL';
+        renderSearchableDropdown(cfg.key);
+      });
+    }
+
+    function renderFilterButtons() {
+      [
+        { containerId: 'btnGroupYear', key: 'year', allLabel: 'ทั้งหมด' },
+        { containerId: 'btnGroupOffice', key: 'office', allLabel: 'ทั้งหมด' },
+        { containerId: 'btnGroupSysStatus', key: 'sysStatus', allLabel: 'ทั้งหมด' },
+        { containerId: 'btnGroupExecBy', key: 'execBy', allLabel: 'ทั้งหมด' },
+      ].forEach(g => {
+        const vals = [...new Set(rawRecords.map(r => (r[g.key] || '-').trim()))].sort((a, b) => a.localeCompare(b, 'th'));
+        if (btnFilters[g.key] !== 'ALL' && !vals.includes(btnFilters[g.key])) btnFilters[g.key] = 'ALL';
+        const options = [{ val: 'ALL', label: g.allLabel }, ...vals.map(v => ({ val: v, label: v }))];
+        document.getElementById(g.containerId).innerHTML = options.map(opt => {
+          const isActive = btnFilters[g.key] === opt.val;
+          const cls = isActive ? 'bg-pea-700 text-white border-pea-700 shadow-sm' : 'bg-white text-slate-700 border-slate-300 hover:bg-purple-50 hover:border-purple-300';
+          return `<button type="button" data-key="${g.key}" data-val="${escapeHtml(opt.val)}" onclick="setBtnFilter(this.dataset.key, this.dataset.val)" class="px-3.5 py-2 rounded-lg text-sm font-semibold border transition ${cls}">${escapeHtml(opt.label)}</button>`;
+        }).join('');
+      });
+    }
+
+    function setBtnFilter(key, val) {
+      btnFilters[key] = (btnFilters[key] === val && val !== 'ALL') ? 'ALL' : val;
+      renderFilterButtons(); applyFiltersAndRender();
+    }
+
+    function renderSearchableDropdown(key) {
+      const cfg = DROPDOWN_CONFIG.find(c => c.key === key);
+      const box = document.getElementById(cfg.boxId);
+      const cur = ddFilters[key], isOpen = openDdKey === key;
+      const displayLabel = cur === 'ALL' ? cfg.allLabel : cur;
+      const activeStyle = cur !== 'ALL' ? 'border-pea-600 bg-purple-50 text-pea-800 font-semibold' : 'border-slate-300 bg-white text-slate-700';
+
+      box.innerHTML = `
+        <button type="button" onclick="toggleSearchableDd('${key}', event)" class="w-full px-3.5 py-2.5 text-sm border rounded-lg flex items-center justify-between gap-2 transition hover:border-purple-400 ${activeStyle}">
+          <span class="truncate">${escapeHtml(displayLabel)}</span>
+          <span class="flex items-center gap-1 shrink-0 text-slate-400">
+            ${cur !== 'ALL' ? `<span onclick="clearOneDd('${key}', event)" title="ล้างตัวกรองนี้" class="px-1 text-rose-500 hover:text-rose-700 font-bold">&times;</span>` : ''}
+            <span class="text-xs">▾</span>
+          </span>
+        </button>
+        ${isOpen ? `<div onclick="event.stopPropagation()" class="absolute left-0 right-0 mt-1 bg-white border border-slate-300 rounded-xl shadow-xl z-40 overflow-hidden"><div class="p-2 border-b border-slate-100 bg-slate-50"><input id="ddSearch_${key}" type="text" oninput="filterDdList('${key}', this.value)" placeholder="🔍 พิมพ์ค้นหา..." class="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pea-600 bg-white" /></div><div id="ddList_${key}" class="max-h-60 overflow-y-auto divide-y divide-slate-50 text-sm"></div></div>` : ''}
+      `;
+      if (isOpen) { filterDdList(key, ''); setTimeout(() => { const inp = document.getElementById(`ddSearch_${key}`); if (inp) inp.focus(); }, 10); }
+    }
+
+    function toggleSearchableDd(key, e) {
+      if (e) e.stopPropagation();
+      const prev = openDdKey; openDdKey = (openDdKey === key) ? null : key;
+      if (prev && prev !== key) renderSearchableDropdown(prev);
+      renderSearchableDropdown(key);
+    }
+
+    function clearOneDd(key, e) {
+      if (e) e.stopPropagation();
+      ddFilters[key] = 'ALL'; if (openDdKey === key) openDdKey = null;
+      renderSearchableDropdown(key); applyFiltersAndRender();
+    }
+
+    function filterDdList(key, query) {
+      const cfg = DROPDOWN_CONFIG.find(c => c.key === key);
+      const q = String(query || '').trim().toLowerCase();
+      const listEl = document.getElementById(`ddList_${key}`);
+      if (!listEl) return;
+      const matched = (ddOptionsMap[key] || []).filter(v => !q || v.toLowerCase().includes(q));
+      const items = (!q ? [{ val: 'ALL', label: cfg.allLabel }] : []).concat(matched.map(v => ({ val: v, label: v })));
+      if (!items.length) { listEl.innerHTML = `<div class="px-3 py-4 text-center text-slate-400 text-sm">ไม่พบข้อมูลที่ค้นหา</div>`; return; }
+      listEl.innerHTML = items.map(it => {
+        const isSel = ddFilters[key] === it.val;
+        return `<button type="button" data-key="${key}" data-val="${escapeHtml(it.val)}" onclick="selectDdOption(this.dataset.key, this.dataset.val)" class="w-full text-left px-3.5 py-2 hover:bg-purple-50 transition flex items-center justify-between ${isSel ? 'bg-purple-50 font-bold text-pea-800' : 'text-slate-700'}"><span class="truncate">${escapeHtml(it.label)}</span>${isSel ? '<span class="text-pea-700">✓</span>' : ''}</button>`;
+      }).join('');
+    }
+
+    function selectDdOption(key, val) { ddFilters[key] = val; openDdKey = null; renderSearchableDropdown(key); applyFiltersAndRender(); }
+    document.addEventListener('click', () => { if (openDdKey) { const p = openDdKey; openDdKey = null; renderSearchableDropdown(p); } });
+
+    function onSliderInput(key, bound) {
+      const minEl = document.getElementById(`min_${key}`), maxEl = document.getElementById(`max_${key}`);
+      let minV = Number(minEl.value), maxV = Number(maxEl.value);
+      if (bound === 'min' && minV > maxV) { minV = maxV; minEl.value = minV; }
+      if (bound === 'max' && maxV < minV) { maxV = minV; maxEl.value = maxV; }
+      sliderFilters[key] = { min: minV, max: maxV }; syncSliderUI(key); applyFiltersAndRender();
+    }
+
+    function onNumInput(key, bound) {
+      let minV = Math.max(0, Math.min(100, Number(document.getElementById(`numMin_${key}`).value) || 0));
+      let maxV = Math.max(0, Math.min(100, Number(document.getElementById(`numMax_${key}`).value) || 0));
+      if (bound === 'min' && minV > maxV) minV = maxV;
+      if (bound === 'max' && maxV < minV) maxV = minV;
+      sliderFilters[key] = { min: minV, max: maxV };
+      document.getElementById(`min_${key}`).value = minV; document.getElementById(`max_${key}`).value = maxV;
+      syncSliderUI(key); applyFiltersAndRender();
+    }
+
+    function syncSliderUI(key) {
+      const { min, max } = sliderFilters[key];
+      document.getElementById(`numMin_${key}`).value = min; document.getElementById(`numMax_${key}`).value = max;
+      const fill = document.getElementById(`fill_${key}`); fill.style.left = min + '%'; fill.style.width = (max - min) + '%';
+      const lbl = document.getElementById(`lbl_${key}`);
+      if (min === 0 && max === 100) lbl.textContent = 'ทั้งหมด';
+      else if (min > 0 && max === 100) lbl.textContent = `ตั้งแต่ ${min}% ขึ้นไป`;
+      else if (min === 0 && max < 100) lbl.textContent = `ไม่เกิน ${max}%`;
+      else lbl.textContent = `${min}% - ${max}%`;
+    }
+
+    const matchPctRange = (val, r) => (r.min === 0 && r.max === 100) ? true : (r.max === 100 ? val >= r.min : (val >= r.min && val <= r.max));
+
+    function deduplicateByWbs(rows) {
+      const map = new Map(), metaKeys = ['year','office','title','sysStatus','userStatus','execBy','budget','dept','supervisor','contractor'];
+      const mode = activeConfig.dedupMode || 'first';
+      rows.forEach(r => {
+        const key = (r.wbs || '').trim(); if (!key) return;
+        if (!map.has(key)) map.set(key, { ...r });
+        else {
+          const prev = map.get(key);
+          metaKeys.forEach(k => { if ((!prev[k] || prev[k] === '-') && r[k] && r[k] !== '-') prev[k] = r[k]; });
+          if (mode === 'sum') { prev.remLabor += r.remLabor; prev.remSupervision += r.remSupervision; prev.remTransport += r.remTransport; prev.remMisc += r.remMisc; prev.remSiteExp += r.remSiteExp; }
+        }
+      });
+      return Array.from(map.values());
+    }
+
+    function getDisplayedBaseList() {
+      let list = currentFilteredUnique;
+      if (showOnlyCompletedMatWbs && pendingMatWbsSet) {
+        list = list.filter(r => !pendingMatWbsSet.has(String(r.wbs || '').trim().toUpperCase()));
+      }
+      if (showOnlySelectedWbs && selectedWbsSet.size > 0) {
+        list = list.filter(r => selectedWbsSet.has(r.wbs));
+      }
+      return list;
+    }
+
+    function applyFiltersAndRender() {
+      showOnlyCompletedMatWbs = false;
+      const f = {
+        year: btnFilters.year, office: btnFilters.office, sysStatus: btnFilters.sysStatus, execBy: btnFilters.execBy,
+        budget: ddFilters.budget, dept: ddFilters.dept, supervisor: ddFilters.supervisor, contractor: ddFilters.contractor,
+        search: document.getElementById('searchBox').value.trim().toLowerCase(),
+      };
+      let activeCount = Object.entries(f).filter(([k, v]) => k !== 'search' ? v !== 'ALL' : v !== '').length;
+      Object.values(sliderFilters).forEach(rng => { if (rng.min > 0 || rng.max < 100) activeCount++; });
+      const badge = document.getElementById('activeFilterCount');
+      if (activeCount > 0) { badge.textContent = `กำลังกรอง ${activeCount} เงื่อนไข`; badge.classList.remove('hidden'); }
+      else badge.classList.add('hidden');
+
+      const filteredRaw = rawRecords.filter(r => {
+        if (f.year !== 'ALL' && (r.year || '-') !== f.year) return false;
+        if (f.office !== 'ALL' && (r.office || '-') !== f.office) return false;
+        if (f.sysStatus !== 'ALL' && (r.sysStatus || '-') !== f.sysStatus) return false;
+        if (f.execBy !== 'ALL' && (r.execBy || '-') !== f.execBy) return false;
+        if (f.budget !== 'ALL' && (r.budget || '-') !== f.budget) return false;
+        if (f.dept !== 'ALL' && (r.dept || '-') !== f.dept) return false;
+        if (f.supervisor !== 'ALL' && (r.supervisor || '-') !== f.supervisor) return false;
+        if (f.contractor !== 'ALL' && (r.contractor || '-') !== f.contractor) return false;
+        if (!matchPctRange(r.matPct, sliderFilters.matPct)) return false;
+        if (!matchPctRange(r.laborPct, sliderFilters.laborPct)) return false;
+        if (!matchPctRange(r.sitePct, sliderFilters.sitePct)) return false;
+        if (f.search && !`${r.wbs} ${r.title} ${r.supervisor} ${r.contractor} ${r.userStatus} ${r.execBy}`.toLowerCase().includes(f.search)) return false;
+        return true;
+      });
+
+      currentFilteredUnique = deduplicateByWbs(filteredRaw);
+      const validSet = new Set(currentFilteredUnique.map(r => r.wbs));
+      selectedWbsSet.forEach(w => { if (!validSet.has(w)) selectedWbsSet.delete(w); });
+      if (selectedWbsSet.size === 0) showOnlySelectedWbs = false;
+
+      currentPage = 1;
+      renderStatusCards3(); renderCharts(); renderTable(); render5BudgetCards();
+    }
+
+    function clearAllFilters() {
+      btnFilters = { year: 'ALL', office: 'ALL', sysStatus: 'ALL', execBy: 'ALL' };
+      ddFilters = { budget: 'ALL', dept: 'ALL', supervisor: 'ALL', contractor: 'ALL' };
+      openDdKey = null;
+      ['matPct', 'laborPct', 'sitePct'].forEach(k => {
+        sliderFilters[k] = { min: 0, max: 100 };
+        document.getElementById(`min_${k}`).value = 0; document.getElementById(`max_${k}`).value = 100; syncSliderUI(k);
+      });
+      document.getElementById('searchBox').value = '';
+      selectedWbsSet.clear(); showOnlySelectedWbs = false; showOnlyCompletedMatWbs = false;
+      renderFilterButtons(); DROPDOWN_CONFIG.forEach(cfg => renderSearchableDropdown(cfg.key)); applyFiltersAndRender();
+    }
+
+    function render5BudgetCards() {
+      const hasSel = selectedWbsSet.size > 0;
+      const displayedBase = getDisplayedBaseList();
+      const targetRows = hasSel ? displayedBase.filter(r => selectedWbsSet.has(r.wbs)) : displayedBase;
+      const summaryEl = document.getElementById('uniqueWbsSummaryText'), btnClear = document.getElementById('btnClearSelection');
+      if (hasSel) {
+        summaryEl.textContent = `📌 กำลังสรุปยอดเฉพาะ ${targetRows.length.toLocaleString('th-TH')} งานที่เลือกในตาราง`;
+        summaryEl.className = 'text-xs sm:text-sm px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 font-bold';
+        btnClear.classList.remove('hidden');
+      } else if (showOnlyCompletedMatWbs) {
+        summaryEl.textContent = `✅ งานที่เบิกพัสดุครบแล้ว ${targetRows.length.toLocaleString('th-TH')} WBS`;
+        summaryEl.className = 'text-xs sm:text-sm px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold';
+        btnClear.classList.add('hidden');
+      } else {
+        summaryEl.textContent = `นับจาก ${targetRows.length.toLocaleString('th-TH')} WBS (ทั้งหมดตามตัวกรอง)`;
+        summaryEl.className = 'text-xs sm:text-sm px-3 py-1 rounded-full bg-slate-200 text-slate-700 font-semibold';
+        btnClear.classList.add('hidden');
+      }
+      document.getElementById('budgetCards5').innerHTML = BUDGET_CARDS_CONFIG.map(cfg => {
+        const sum = targetRows.reduce((acc, r) => acc + parseNum(r[cfg.key]), 0);
+        return `<div class="bg-white rounded-xl shadow-sm border border-slate-200 border-l-4 ${cfg.color} p-4 flex flex-col justify-between"><div class="text-sm font-bold text-slate-600 mb-2">${cfg.label}</div><div class="text-xl sm:text-2xl font-display font-bold ${cfg.text} tracking-tight break-all">${fmtMoney(sum)}</div><div class="mt-2 text-xs text-slate-400">${hasSel ? `รวม ${targetRows.length} งานที่เลือก` : 'ยอดรวมคงเหลือสุทธิ'}</div></div>`;
+      }).join('');
+      updateTableActionButtons();
+    }
+
+    function updateTableActionButtons() {
+      const cnt = selectedWbsSet.size;
+      document.getElementById('lblBtnMatSummary').textContent = cnt > 0 ? `แสดงความต้องการพัสดุ (${cnt})` : 'แสดงความต้องการพัสดุ';
+
+      const btnSel = document.getElementById('btnToggleShowSelected'), lblSel = document.getElementById('lblBtnShowSelected');
+      if (showOnlySelectedWbs && cnt > 0) {
+        btnSel.className = 'px-3.5 py-2 rounded-lg font-semibold bg-pea-700 hover:bg-pea-800 text-white border border-pea-700 shadow-sm transition flex items-center gap-1.5';
+        lblSel.textContent = `✓ แสดงเฉพาะที่เลือก (${cnt}) • กดดูทั้งหมด`;
+      } else {
+        btnSel.className = 'px-3.5 py-2 rounded-lg font-semibold bg-white hover:bg-purple-50 text-pea-800 border border-pea-600 shadow-sm transition flex items-center gap-1.5';
+        lblSel.textContent = cnt > 0 ? `แสดง WBS ที่เลือก (${cnt})` : 'แสดง WBS ที่เลือก';
+      }
+
+      const btnComp = document.getElementById('btnToggleCompletedMat'), lblComp = document.getElementById('lblBtnCompletedMat');
+      if (showOnlyCompletedMatWbs) {
+        btnComp.className = 'px-3.5 py-2 rounded-lg font-semibold bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-600 shadow-sm transition flex items-center gap-1.5';
+        lblComp.textContent = `✓ งานที่เบิกพัสดุครบแล้ว (${currentSortedList.length}) • กดดูทั้งหมด`;
+      } else {
+        btnComp.className = 'px-3.5 py-2 rounded-lg font-semibold bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-600 shadow-sm transition flex items-center gap-1.5';
+        lblComp.textContent = 'งานที่เบิกพัสดุครบแล้ว';
+      }
+    }
+
+    function renderStatusCards3() {
+      const total = currentFilteredUnique.length;
+      document.getElementById('statusCards3').innerHTML = STATUS_CARD_CONFIG.map(cfg => {
+        const count = currentFilteredUnique.filter(r => hasStatusCode(r.sysStatus, cfg.code)).length;
+        const pct = total ? ((count / total) * 100).toFixed(1) : '0.0';
+        const isSelected = btnFilters.sysStatus.toUpperCase() === cfg.code;
+        return `<div onclick="toggleStatusCardFilter('${cfg.code}')" class="cursor-pointer bg-white rounded-xl shadow-sm border border-l-4 ${cfg.border} p-5 transition ${isSelected ? 'ring-2 ' + cfg.ring : 'border-slate-200 hover:shadow-md'}"><div class="flex items-center justify-between"><div><span class="inline-block px-2.5 py-0.5 rounded text-xs font-bold text-white ${cfg.badgeBg}">${cfg.code}</span><h3 class="text-base font-bold text-slate-800 mt-1.5">${cfg.title}</h3><p class="text-xs sm:text-sm text-slate-500">${cfg.desc}</p></div><div class="text-right"><div class="text-3xl font-display font-bold ${cfg.text}">${count.toLocaleString('th-TH')}</div><div class="text-xs sm:text-sm font-semibold text-slate-500">งาน (${pct}%)</div></div></div></div>`;
+      }).join('');
+    }
+
+    function toggleStatusCardFilter(code) {
+      const matchedOpt = [...new Set(rawRecords.map(r => (r.sysStatus || '').trim()))].find(s => s.toUpperCase() === code) || code;
+      setBtnFilter('sysStatus', matchedOpt);
+    }
+
+    function getStatusColor(st, idx) {
+      const palette = { CRTD: '#64748b', REL: '#3b82f6', TECO: '#f59e0b', CLSD: '#10b981' };
+      const fallbacks = ['#8b5cf6', '#ec4899', '#06b6d4', '#ef4444', '#84cc16'];
+      return palette[String(st).toUpperCase()] || fallbacks[idx % fallbacks.length];
+    }
+
+    function setChartMode(mode) {
+      chartMode = mode;
+      const btnC = document.getElementById('chartModeBtn_contractor'), btnO = document.getElementById('chartModeBtn_office');
+      btnC.className = mode === 'contractor' ? 'px-3 py-1 rounded-md text-xs font-semibold transition bg-pea-700 text-white shadow-sm' : 'px-3 py-1 rounded-md text-xs font-semibold transition text-slate-600 hover:text-slate-900';
+      btnO.className = mode === 'office' ? 'px-3 py-1 rounded-md text-xs font-semibold transition bg-pea-700 text-white shadow-sm' : 'px-3 py-1 rounded-md text-xs font-semibold transition text-slate-600 hover:text-slate-900';
+      renderCharts();
+    }
+
+    function renderCharts() {
+      const ctx = document.getElementById('mainBarChart').getContext('2d');
+      const wrapper = document.getElementById('chartHeightWrapper');
+      if (barChart) barChart.destroy();
+
+      const contractorTotals = {};
+      currentFilteredUnique.forEach(r => { const c = (r.contractor || '-').trim(); contractorTotals[c] = (contractorTotals[c] || 0) + 1; });
+      const sortedContractors = Object.keys(contractorTotals).sort((a, b) => (contractorTotals[b] - contractorTotals[a]) || a.localeCompare(b, 'th'));
+
+      if (chartMode === 'contractor') {
+        wrapper.style.height = Math.max(260, sortedContractors.length * 38 + 60) + 'px';
+        const statuses = [...new Set(currentFilteredUnique.map(r => r.sysStatus || 'ไม่ระบุ'))].sort();
+        const labels = sortedContractors.map(c => `${c} (${contractorTotals[c]} งาน)`);
+        const datasets = statuses.map((st, idx) => ({
+          label: st,
+          data: sortedContractors.map(c => currentFilteredUnique.filter(r => (r.contractor || '-').trim() === c && (r.sysStatus || 'ไม่ระบุ') === st).length),
+          backgroundColor: getStatusColor(st, idx), borderRadius: 4, barThickness: 22,
+        }));
+        barChart = new Chart(ctx, {
+          type: 'bar', data: { labels, datasets },
+          options: {
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+            onClick: (evt, els) => { if (els && els.length) { const c = sortedContractors[els[0].index]; ddFilters.contractor = (ddFilters.contractor === c) ? 'ALL' : c; renderSearchableDropdown('contractor'); applyFiltersAndRender(); } },
+            plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { family: 'Sarabun', size: 13 } } } },
+            scales: { x: { stacked: true, beginAtZero: true, ticks: { stepSize: 1, font: { family: 'Sarabun', size: 12 } } }, y: { stacked: true, grid: { display: false }, ticks: { font: { family: 'Sarabun', size: 13 } } } }
+          }
+        });
+      } else {
+        wrapper.style.height = '310px';
+        const datasets = sortedContractors.map((c, idx) => ({
+          label: `${c} (${contractorTotals[c]})`,
+          data: TARGET_OFFICES.map(off => currentFilteredUnique.filter(r => r.office === off && (r.contractor || '-').trim() === c).length),
+          backgroundColor: CONTRACTOR_COLORS[idx % CONTRACTOR_COLORS.length], borderRadius: 4,
+        }));
+        barChart = new Chart(ctx, {
+          type: 'bar', data: { labels: TARGET_OFFICES, datasets },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            onClick: (evt, els) => { if (els && els.length) { const c = sortedContractors[els[0].datasetIndex]; ddFilters.contractor = (ddFilters.contractor === c) ? 'ALL' : c; renderSearchableDropdown('contractor'); applyFiltersAndRender(); } },
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { family: 'Sarabun', size: 12 } } } },
+            scales: { x: { stacked: true, grid: { display: false }, ticks: { font: { family: 'Prompt', size: 13 } } }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } }
+          }
+        });
+      }
+    }
+
+    function sortBy(key) { if (sortState.key === key) sortState.asc = !sortState.asc; else { sortState.key = key; sortState.asc = true; } renderTable(); }
+
+    function toggleShowOnlySelected() {
+      if (!showOnlySelectedWbs && selectedWbsSet.size === 0) { alert('กรุณาติ๊กเลือกหมายเลขงาน WBS ในตารางอย่างน้อย 1 งานก่อนครับ'); return; }
+      showOnlySelectedWbs = !showOnlySelectedWbs; currentPage = 1; renderTable(); render5BudgetCards();
+    }
+
+    function toggleCompletedMaterials() {
+      if (showOnlyCompletedMatWbs) {
+        showOnlyCompletedMatWbs = false; currentPage = 1; renderTable(); render5BudgetCards(); return;
+      }
+      const tableWbsList = currentSortedList.map(r => r.wbs);
+      if (!tableWbsList.length) {
+        alert('ไม่มีหมายเลขงาน WBS ในตารางให้ตรวจสอบครับ');
+        return;
+      }
+
+      const btn = document.getElementById('btnToggleCompletedMat'), lbl = document.getElementById('lblBtnCompletedMat');
+      btn.disabled = true; lbl.textContent = `กำลังตรวจ ${tableWbsList.length} งาน...`;
+
+      google.script.run
+        .withSuccessHandler(res => {
+          btn.disabled = false;
+          if (!res || !res.ok) { lbl.textContent = 'งานที่เบิกพัสดุครบแล้ว'; alert((res && res.error) ? res.error : 'ไม่สามารถตรวจสอบข้อมูลจาก Sh1 ได้'); return; }
+          pendingMatWbsSet = new Set((res.pendingWbsList || []).map(w => String(w).trim().toUpperCase()));
+          showOnlyCompletedMatWbs = true; currentPage = 1;
+          renderTable(); render5BudgetCards();
+        })
+        .withFailureHandler(err => {
+          btn.disabled = false; lbl.textContent = 'งานที่เบิกพัสดุครบแล้ว'; alert(err && err.message ? err.message : String(err));
+        })
+        .getWbsWithPendingMaterials(tableWbsList, activeConfig.sh1ColMap);
+    }
+
+    function renderTable() {
+      if (showOnlySelectedWbs && selectedWbsSet.size === 0) showOnlySelectedWbs = false;
+      const baseList = getDisplayedBaseList();
+
+      currentSortedList = [...baseList].sort((a, b) => {
+        const va = a[sortState.key], vb = b[sortState.key];
+        const cmp = (typeof va === 'number' && typeof vb === 'number') ? (va - vb) : String(va ?? '').localeCompare(String(vb ?? ''), 'th');
+        return sortState.asc ? cmp : -cmp;
+      });
+
+      const pageSize = Number(document.getElementById('pageSizeSelect').value) || 50;
+      const total = currentSortedList.length, totalPages = Math.max(1, Math.ceil(total / pageSize));
+      if (currentPage > totalPages) currentPage = totalPages;
+      const start = (currentPage - 1) * pageSize;
+      currentPageSlice = currentSortedList.slice(start, start + pageSize);
+
+      if (showOnlyCompletedMatWbs && showOnlySelectedWbs) {
+        document.getElementById('tableInfo').textContent = `แสดงเฉพาะงานที่เบิกพัสดุครบแล้วและที่เลือกไว้ ${total.toLocaleString('th-TH')} WBS`;
+      } else if (showOnlyCompletedMatWbs) {
+        document.getElementById('tableInfo').textContent = `✅ พบงานที่เบิกพัสดุครบแล้ว ${total.toLocaleString('th-TH')} WBS (ไม่พบวัสดุค้างเบิกตามเงื่อนไขใน Sh1)`;
+      } else if (showOnlySelectedWbs) {
+        document.getElementById('tableInfo').textContent = `กำลังแสดงเฉพาะ ${total.toLocaleString('th-TH')} WBS ที่เลือกไว้ (จากทั้งหมด ${currentFilteredUnique.length.toLocaleString('th-TH')} งาน)`;
+      } else {
+        document.getElementById('tableInfo').textContent = `พบ ${total.toLocaleString('th-TH')} WBS (ไม่ซ้ำ) • แสดงลำดับ ${total ? start + 1 : 0} - ${start + currentPageSlice.length} • กดเลข WBS เพื่อดูวัสดุ Sh1`;
+      }
+
+      const tbody = document.getElementById('wbsTableBody');
+      if (!currentPageSlice.length) {
+        tbody.innerHTML = `<tr><td colspan="12" class="py-10 text-center text-slate-400 text-base">ไม่พบข้อมูล WBS ตามเงื่อนไขที่กรอง</td></tr>`;
+      } else {
+        tbody.innerHTML = currentPageSlice.map((r, i) => {
+          const rowNum = start + i + 1, sysColor = getStatusColor(r.sysStatus, 0), isChecked = selectedWbsSet.has(r.wbs);
+          return `
+            <tr data-wbs="${escapeHtml(r.wbs)}" onclick="openDetailModal(this.dataset.wbs)" class="${isChecked ? 'bg-amber-50/70 hover:bg-amber-100/70' : 'hover:bg-purple-50/40'} cursor-pointer transition">
+              <td class="py-3 px-3 text-center" onclick="event.stopPropagation()"><input type="checkbox" ${isChecked ? 'checked' : ''} data-wbs="${escapeHtml(r.wbs)}" onchange="toggleRowSelect(this.dataset.wbs, this.checked)" class="w-4 h-4 rounded text-pea-700 cursor-pointer" /></td>
+              <td class="py-3 px-3 text-center text-sm text-slate-500 font-semibold">${rowNum}</td>
+              <td class="py-3 px-3 whitespace-nowrap"><button type="button" data-wbs="${escapeHtml(r.wbs)}" onclick="event.stopPropagation(); openMaterialModal(this.dataset.wbs)" class="font-mono text-sm font-bold text-pea-700 bg-purple-50 hover:bg-pea-700 hover:text-white border border-purple-200 px-2.5 py-1 rounded-md transition inline-flex items-center gap-1">${escapeHtml(r.wbs)} <span class="text-xs opacity-75">📦</span></button></td>
+              <td class="py-3 px-3 text-slate-800">${escapeHtml(r.title)}</td>
+              <td class="py-3 px-3 whitespace-nowrap"><span class="px-2.5 py-0.5 rounded text-xs font-bold text-white" style="background:${sysColor}">${escapeHtml(r.sysStatus || '-')}</span></td>
+              <td class="py-3 px-3 whitespace-nowrap"><span class="px-2.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800 font-mono text-xs font-semibold">${escapeHtml(r.userStatus || '-')}</span></td>
+              <td class="py-3 px-3 text-right whitespace-nowrap font-semibold text-blue-700">${fmtPct(r.matPct)}</td>
+              <td class="py-3 px-3 text-right whitespace-nowrap font-semibold text-pea-700">${fmtPct(r.laborPct)}</td>
+              <td class="py-3 px-3 text-right whitespace-nowrap font-semibold text-emerald-700">${fmtPct(r.sitePct)}</td>
+              <td class="py-3 px-3 text-right whitespace-nowrap font-mono font-bold text-emerald-800">${fmtMoney(r.remSiteExp)}</td>
+              <td class="py-3 px-3 whitespace-nowrap text-slate-700">${escapeHtml(r.execBy || '-')}</td>
+              <td class="py-3 px-3 whitespace-nowrap text-slate-700">${escapeHtml(r.supervisor || '-')}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+      document.getElementById('chkSelectPage').checked = currentPageSlice.length > 0 && currentPageSlice.every(r => selectedWbsSet.has(r.wbs));
+      document.getElementById('paginationBar').innerHTML = `<span>หน้า ${currentPage} จาก ${totalPages}</span><div class="flex gap-1.5"><button onclick="goPage(1)" ${currentPage === 1 ? 'disabled' : ''} class="px-3 py-1 rounded border bg-white disabled:opacity-40">หน้าแรก</button><button onclick="goPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} class="px-3 py-1 rounded border bg-white disabled:opacity-40">ก่อนหน้า</button><button onclick="goPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''} class="px-3 py-1 rounded border bg-white disabled:opacity-40">ถัดไป</button><button onclick="goPage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''} class="px-3 py-1 rounded border bg-white disabled:opacity-40">สุดท้าย</button></div>`;
+      updateTableActionButtons();
+    }
+
+    function goPage(p) { currentPage = p; renderTable(); }
+    function toggleRowSelect(wbs, checked) { if (checked) selectedWbsSet.add(wbs); else selectedWbsSet.delete(wbs); renderTable(); render5BudgetCards(); }
+    function toggleSelectPage(checked) { currentPageSlice.forEach(r => { if (checked) selectedWbsSet.add(r.wbs); else selectedWbsSet.delete(r.wbs); }); renderTable(); render5BudgetCards(); }
+    function selectAllInPage() { toggleSelectPage(true); }
+    function selectTopN(n) { showOnlySelectedWbs = false; selectedWbsSet.clear(); currentSortedList.slice(0, n).forEach(r => selectedWbsSet.add(r.wbs)); renderTable(); render5BudgetCards(); }
+    function clearRowSelection() { selectedWbsSet.clear(); showOnlySelectedWbs = false; renderTable(); render5BudgetCards(); }
+
+    function groupMaterialsByCode(rows) {
+      const groupMap = new Map();
+      rows.forEach(r => {
+        const key = (r.matCode && r.matCode !== '-') ? ('CODE:' + r.matCode.toUpperCase()) : ('TEXT:' + r.matText);
+        if (!groupMap.has(key)) {
+          groupMap.set(key, {
+            matCode: r.matCode, matText: r.matText, totalQty: r.colVVal, mb52Val: r.mb52Val,
+            moveTypes: new Set([r.moveType]),
+            matMoveStatuses: new Set(r.matMoveStatus && r.matMoveStatus !== '-' ? [r.matMoveStatus] : []),
+            wbsSet: new Set(r.wbs ? [r.wbs] : [])
+          });
+        } else {
+          const g = groupMap.get(key);
+          g.totalQty += r.colVVal;
+          if ((!g.matText || g.matText === '-') && r.matText !== '-') g.matText = r.matText;
+          if ((!g.mb52Val || g.mb52Val === '-') && r.mb52Val !== '-') g.mb52Val = r.mb52Val;
+          g.moveTypes.add(r.moveType);
+          if (r.matMoveStatus && r.matMoveStatus !== '-') g.matMoveStatuses.add(r.matMoveStatus);
+          if (r.wbs) g.wbsSet.add(r.wbs);
+        }
+      });
+      return Array.from(groupMap.values()).map(g => ({
+        matCode: g.matCode, matText: g.matText, totalQty: g.totalQty, mb52Val: g.mb52Val,
+        moveTypesStr: Array.from(g.moveTypes).join(', '),
+        matMoveStr: g.matMoveStatuses.size ? Array.from(g.matMoveStatuses).join(', ') : '-',
+        wbsList: Array.from(g.wbsSet)
+      }));
+    }
+
+    function openMaterialModal(wbsCode) {
+      const rowInfo = currentFilteredUnique.find(r => r.wbs === wbsCode) || {};
+      document.getElementById('matModalWbs').textContent = wbsCode;
+      document.getElementById('matModalTitle').textContent = rowInfo.title || '-';
+      document.getElementById('matModalBadge').textContent = 'กำลังดึงจาก Sh1...';
+      document.getElementById('matModalBody').innerHTML = `<div class="py-10 text-center"><div class="w-8 h-8 border-4 border-purple-200 border-t-pea-700 rounded-full animate-spin mx-auto mb-3"></div><div class="text-sm text-slate-500">กำลังอ่านรายการวัสดุจากชีต Sh1...</div></div>`;
+      document.getElementById('btnViewBudgetFromMat').onclick = () => { closeMaterialModal(); openDetailModal(wbsCode); };
+      document.getElementById('materialModal').classList.replace('hidden', 'flex');
+
+      google.script.run
+        .withSuccessHandler(res => {
+          if (!res || !res.ok) {
+            document.getElementById('matModalBadge').textContent = 'ผิดพลาด';
+            document.getElementById('matModalBody').innerHTML = `<div class="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-sm">${escapeHtml((res && res.error) ? res.error : 'ไม่สามารถอ่านข้อมูลจากชีต Sh1 ได้')}</div>`;
+            return;
+          }
+          const grouped = groupMaterialsByCode(res.items || []);
+          document.getElementById('matModalBadge').textContent = `พบ ${grouped.length} รายการ (รวมยอดแล้ว • จาก ${res.totalRowsForWbs} แถวใน Sh1)`;
+          const body = document.getElementById('matModalBody');
+          if (!grouped.length) {
+            body.innerHTML = `<div class="py-10 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300"><div class="text-2xl mb-2">✅</div><div class="text-sm font-semibold text-slate-700">ไม่พบรายการวัสดุค้างเบิกตามเงื่อนไข (เบิกพัสดุครบแล้ว)</div></div>`;
+            return;
+          }
+          body.innerHTML = `<div class="border border-slate-200 rounded-xl overflow-x-auto"><table class="w-full text-left border-collapse text-sm"><thead><tr class="bg-slate-100 text-slate-700 text-xs sm:text-sm font-semibold border-b border-slate-200"><th class="py-2.5 px-3 w-12 text-center">ลำดับ</th><th class="py-2.5 px-3 whitespace-nowrap">เลขพัสดุ</th><th class="py-2.5 px-3 min-w-[200px]">ข้อความวัสดุ (Sh1)</th><th class="py-2.5 px-3 text-center whitespace-nowrap">ประเภทการเคลื่อนย้าย</th><th class="py-2.5 px-3 text-right whitespace-nowrap">ต้องการ (คอลัมน์ V)</th><th class="py-2.5 px-3 text-right whitespace-nowrap">ยอด MB52</th><th class="py-2.5 px-3 text-center whitespace-nowrap">การเคลื่อนย้ายพัสดุ</th></tr></thead><tbody class="divide-y divide-slate-100">${grouped.map((item, idx) => `<tr class="hover:bg-slate-50"><td class="py-2.5 px-3 text-center text-xs text-slate-500">${idx + 1}</td><td class="py-2.5 px-3 font-mono text-xs font-bold text-pea-800 whitespace-nowrap">${escapeHtml(item.matCode)}</td><td class="py-2.5 px-3 font-medium text-slate-800">${escapeHtml(item.matText)}</td><td class="py-2.5 px-3 text-center"><span class="px-2.5 py-0.5 rounded border font-mono text-xs font-bold bg-amber-100 text-amber-800 border-amber-200">${escapeHtml(item.moveTypesStr)}</span></td><td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-700">${fmtQty(item.totalQty)}</td><td class="py-2.5 px-3 text-right font-mono font-bold text-blue-700">${escapeHtml(item.mb52Val)}</td><td class="py-2.5 px-3 text-center whitespace-nowrap"><span class="px-2.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800 text-xs font-semibold">${escapeHtml(item.matMoveStr)}</span></td></tr>`).join('')}</tbody></table></div>`;
+        })
+        .withFailureHandler(err => {
+          document.getElementById('matModalBadge').textContent = 'ผิดพลาด';
+          document.getElementById('matModalBody').innerHTML = `<div class="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-sm">${escapeHtml(err && err.message ? err.message : String(err))}</div>`;
+        })
+        .getMaterialsForWbs(wbsCode, activeConfig.sh1ColMap);
+    }
+
+    function closeMaterialModal() { document.getElementById('materialModal').classList.replace('flex', 'hidden'); }
+
+    function openAggregatedMaterialModal() {
+      if (selectedWbsSet.size === 0) { alert('กรุณาติ๊กเลือกหมายเลขงาน WBS ในตารางอย่างน้อย 1 งานก่อนครับ'); return; }
+      const wbsList = Array.from(selectedWbsSet);
+      document.getElementById('aggWbsCountBadge').textContent = `เลือก ${wbsList.length} WBS`;
+      document.getElementById('aggMatCountBadge').textContent = 'กำลังคำนวณ...';
+      document.getElementById('aggToolbar').classList.add('hidden');
+      document.getElementById('aggSearchInput').value = '';
+      document.getElementById('aggSelectedWbsPreview').textContent = 'WBS ที่เลือก: ' + wbsList.join(', ');
+      document.getElementById('aggModalBody').innerHTML = `<div class="py-12 text-center"><div class="w-9 h-9 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin mx-auto mb-3"></div><div class="text-sm text-slate-500">กำลังดึงและรวมยอดพัสดุจากชีต Sh1...</div></div>`;
+      document.getElementById('aggMaterialModal').classList.replace('hidden', 'flex');
+
+      google.script.run
+        .withSuccessHandler(res => {
+          if (!res || !res.ok) {
+            document.getElementById('aggMatCountBadge').textContent = 'ผิดพลาด';
+            document.getElementById('aggModalBody').innerHTML = `<div class="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-sm">${escapeHtml((res && res.error) ? res.error : 'ไม่สามารถอ่านข้อมูลจากชีต Sh1 ได้')}</div>`;
+            return;
+          }
+          aggRawRows = res.rows || [];
+          aggMoveFilter = 'ALL';
+          document.getElementById('aggToolbar').classList.remove('hidden');
+          renderAggMoveFilterBar(); renderAggMaterialTable();
+        })
+        .withFailureHandler(err => {
+          document.getElementById('aggMatCountBadge').textContent = 'ผิดพลาด';
+          document.getElementById('aggModalBody').innerHTML = `<div class="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-sm">${escapeHtml(err && err.message ? err.message : String(err))}</div>`;
+        })
+        .getAggregatedMaterialsForWbsList(wbsList, activeConfig.sh1ColMap);
+    }
+
+    function renderAggMoveFilterBar() {
+      const counts = {}; aggRawRows.forEach(r => { const m = r.moveType || '-'; counts[m] = (counts[m] || 0) + 1; });
+      const btns = [{ key: 'ALL', label: `ทั้งหมด (${aggRawRows.length} แถว)` }, ...Object.keys(counts).sort().map(t => ({ key: t, label: `${t} (${counts[t]})` }))];
+      document.getElementById('aggMoveFilterBar').innerHTML = `<span class="text-xs font-semibold text-slate-500 mr-1">ประเภทการเคลื่อนย้าย:</span>` +
+        btns.map(b => {
+          const cls = aggMoveFilter === b.key ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-700 border-slate-300 hover:bg-teal-50';
+          return `<button type="button" data-mt="${escapeHtml(b.key)}" onclick="setAggMoveFilter(this.dataset.mt)" class="px-2.5 py-1 rounded-md text-xs font-semibold border transition ${cls}">${escapeHtml(b.label)}</button>`;
+        }).join('');
+    }
+
+    function setAggMoveFilter(mt) { aggMoveFilter = mt; renderAggMoveFilterBar(); renderAggMaterialTable(); }
+
+    function renderAggMaterialTable() {
+      const q = document.getElementById('aggSearchInput').value.trim().toLowerCase();
+      const filteredRows = aggMoveFilter === 'ALL' ? aggRawRows : aggRawRows.filter(r => (r.moveType || '-') === aggMoveFilter);
+      let list = groupMaterialsByCode(filteredRows);
+      if (q) list = list.filter(item => `${item.matCode} ${item.matText} ${item.wbsList.join(' ')}`.toLowerCase().includes(q));
+      list.sort((a, b) => (b.wbsList.length - a.wbsList.length) || (b.totalQty - a.totalQty));
+      aggCurrentList = list;
+      document.getElementById('aggMatCountBadge').textContent = `รวมได้ ${list.length.toLocaleString('th-TH')} รายการพัสดุ (ไม่ซ้ำ)`;
+
+      const body = document.getElementById('aggModalBody');
+      if (!list.length) { body.innerHTML = `<div class="py-10 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300"><div class="text-2xl mb-2">📭</div><div class="text-sm font-semibold text-slate-700">ไม่พบรายการพัสดุตามเงื่อนไขที่กำหนด</div></div>`; return; }
+
+      body.innerHTML = `<div class="border border-slate-200 rounded-xl overflow-x-auto"><table class="w-full text-left border-collapse text-sm"><thead><tr class="bg-slate-100 text-slate-700 text-xs sm:text-sm font-semibold border-b border-slate-200"><th class="py-2.5 px-3 w-12 text-center">ลำดับ</th><th class="py-2.5 px-3 whitespace-nowrap">เลขพัสดุ</th><th class="py-2.5 px-3 min-w-[220px]">ข้อความวัสดุ (Sh1)</th><th class="py-2.5 px-3 text-center whitespace-nowrap">ประเภทเคลื่อนย้าย</th><th class="py-2.5 px-3 text-right whitespace-nowrap">รวมความต้องการ (V)</th><th class="py-2.5 px-3 text-right whitespace-nowrap">ยอด MB52</th><th class="py-2.5 px-3 text-center whitespace-nowrap">การเคลื่อนย้ายพัสดุ</th><th class="py-2.5 px-3 whitespace-nowrap">ใช้ในงาน (WBS)</th></tr></thead><tbody class="divide-y divide-slate-100">${list.map((item, idx) => `<tr class="hover:bg-slate-50"><td class="py-2.5 px-3 text-center text-xs text-slate-500">${idx + 1}</td><td class="py-2.5 px-3 font-mono text-xs font-bold text-pea-800 whitespace-nowrap">${escapeHtml(item.matCode)}</td><td class="py-2.5 px-3 font-medium text-slate-800">${escapeHtml(item.matText)}</td><td class="py-2.5 px-3 text-center font-mono text-xs font-semibold text-slate-700">${escapeHtml(item.moveTypesStr)}</td><td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-700 text-base">${fmtQty(item.totalQty)}</td><td class="py-2.5 px-3 text-right font-mono font-bold text-blue-700">${escapeHtml(item.mb52Val)}</td><td class="py-2.5 px-3 text-center whitespace-nowrap"><span class="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-xs font-semibold">${escapeHtml(item.matMoveStr)}</span></td><td class="py-2.5 px-3 font-mono text-xs font-semibold text-pea-800 whitespace-nowrap">${escapeHtml(item.wbsList.join(', '))}</td></tr>`).join('')}</tbody></table></div>`;
+    }
+
+    function exportAggMaterialsCsv() {
+      const headers = ['ลำดับ', 'เลขพัสดุ', 'ข้อความวัสดุ', 'ประเภทการเคลื่อนย้าย', 'รวมความต้องการ (V)', 'ยอด MB52', 'การเคลื่อนย้ายพัสดุ', 'ใช้ในงาน (WBS)'];
+      const lines = [headers.join(',')];
+      aggCurrentList.forEach((it, idx) => { lines.push([idx + 1, it.matCode, it.matText, it.moveTypesStr, it.totalQty, it.mb52Val, it.matMoveStr, it.wbsList.join(', ')].map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')); });
+      const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'material-demand-summary.csv'; a.click(); URL.revokeObjectURL(url);
+    }
+
+    function closeAggMaterialModal() { document.getElementById('aggMaterialModal').classList.replace('flex', 'hidden'); }
+
+    function openDetailModal(wbsCode) {
+      const r = currentFilteredUnique.find(item => item.wbs === wbsCode); if (!r) return;
+      document.getElementById('detWbs').textContent = r.wbs; document.getElementById('detTitle').textContent = r.title;
+      document.getElementById('detBody').innerHTML = `<div class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl text-sm"><div><span class="text-slate-500">กฟฟ.:</span> <b>${escapeHtml(r.office)}</b></div><div><span class="text-slate-500">งานปี พ.ศ. (U):</span> <b>${escapeHtml(r.year)}</b></div><div><span class="text-slate-500">แผนก:</span> <b>${escapeHtml(r.dept)}</b></div><div><span class="text-slate-500">งบ:</span> <b>${escapeHtml(r.budget)}</b></div><div><span class="text-slate-500">สถานะระบบ (ย่อ):</span> <b>${escapeHtml(r.sysStatus)}</b></div><div><span class="text-slate-500">สถานะผู้ใช้ (N):</span> <b>${escapeHtml(r.userStatus)}</b></div><div><span class="text-slate-500">ดำเนินการโดย:</span> <b>${escapeHtml(r.execBy)}</b></div><div><span class="text-slate-500">ผู้ควบคุมงาน:</span> <b>${escapeHtml(r.supervisor)}</b></div><div class="col-span-2"><span class="text-slate-500">ผู้รับจ้าง:</span> <b>${escapeHtml(r.contractor)}</b></div></div><div class="border border-slate-200 rounded-xl p-3 space-y-1.5 text-sm"><div class="font-bold text-slate-700 mb-1">งบประมาณคงเหลือของ WBS นี้</div><div class="flex justify-between"><span>ค่าแรงคงเหลือ</span><b>${fmtMoney(r.remLabor)}</b></div><div class="flex justify-between"><span>ค่าควบคุมงานคงเหลือ</span><b>${fmtMoney(r.remSupervision)}</b></div><div class="flex justify-between"><span>ค่าขนส่งคงเหลือ</span><b>${fmtMoney(r.remTransport)}</b></div><div class="flex justify-between"><span>ค่าเบ็ดเตล็ดคงเหลือ</span><b>${fmtMoney(r.remMisc)}</b></div><div class="flex justify-between pt-1 border-t"><span>คชจ.หน้างานคงเหลือ</span><b class="text-emerald-700">${fmtMoney(r.remSiteExp)}</b></div></div><div class="grid grid-cols-3 gap-2 text-xs"><div class="bg-blue-50 p-2.5 rounded-lg text-center"><div class="text-slate-500">เบิกค่าพัสดุ</div><div class="text-base font-bold text-blue-700">${fmtPct(r.matPct)}</div></div><div class="bg-purple-50 p-2.5 rounded-lg text-center"><div class="text-slate-500">เบิกค่าแรง</div><div class="text-base font-bold text-pea-700">${fmtPct(r.laborPct)}</div></div><div class="bg-emerald-50 p-2.5 rounded-lg text-center"><div class="text-slate-500">คชจ. หน้างาน</div><div class="text-base font-bold text-emerald-700">${fmtPct(r.sitePct)}</div></div></div>`;
+      document.getElementById('detailModal').classList.replace('hidden', 'flex');
+    }
+
+    function closeDetailModal() { document.getElementById('detailModal').classList.replace('flex', 'hidden'); }
+
+    function exportFilteredCsv() {
+      const targetRows = selectedWbsSet.size > 0 ? currentSortedList.filter(r => selectedWbsSet.has(r.wbs)) : currentSortedList;
+      const headers = ['ลำดับที่', 'WBS', 'คำอธิบาย', 'สถานะระบบ (ย่อ)', 'สถานะผู้ใช้', 'เปอร์เซ็นต์เบิกค่าพัสดุ', 'เปอร์เซ็นต์เบิกค่าแรง', 'เปอร์เซ็นต์ คชจ. หน้างาน', 'คชจ.หน้างานคงเหลือ', 'ดำเนินการโดย', 'ผู้ควบคุมงาน'];
+      const csvLines = [headers.join(',')];
+      targetRows.forEach((r, idx) => { csvLines.push([idx + 1, r.wbs, r.title, r.sysStatus, r.userStatus, r.matPct, r.laborPct, r.sitePct, r.remSiteExp, r.execBy, r.supervisor].map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')); });
+      const blob = new Blob(['\uFEFF' + csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'wbs-dashboard-export.csv'; a.click(); URL.revokeObjectURL(url);
+    }
+
+    renderSliders();
+    fetchFromGoogleSheet();
+  </script>
+</body>
+</html>
+<!-- END OF INDEX.HTML -->
