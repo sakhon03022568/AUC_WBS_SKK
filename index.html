@@ -318,6 +318,23 @@
   </div>
 
   <script>
+    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyWjJ2dd_inBfjGWgIrHOrRKRoskDDj7gLzbc4Gr2pp925_yxL9UXtwWTkuOS4IZjY2/exec';
+
+    async function callGasApi(action, payload = {}) {
+      const res = await fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action, ...payload })
+      });
+      if (!res.ok) throw new Error('HTTP Error: ' + res.status);
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        throw new Error('เซิร์ฟเวอร์ตอบกลับไม่ใช่ JSON (กรุณาตรวจสอบว่า Deploy แบบ Anyone และอัปเดต New version แล้ว)');
+      }
+    }
+
     const TARGET_OFFICES = ['กฟจ. สกลนคร', 'กฟส. พรรณานิคม', 'กฟส. อากาศอำนวย'];
     const BUDGET_CARDS_CONFIG = [
       { key: 'remLabor', label: '1. ค่าแรงคงเหลือ', color: 'border-blue-500', text: 'text-blue-700' },
@@ -460,27 +477,26 @@
       const pin = document.getElementById('adminPinInput').value.trim();
       const btn = document.getElementById('btnVerifyPin'), errEl = document.getElementById('adminPinError');
       errEl.classList.add('hidden'); btn.disabled = true; btn.textContent = 'กำลังตรวจสอบ...';
-      google.script.run
-        .withSuccessHandler(res => {
+      callGasApi('verifyAdminPin', { pin })
+        .then(res => {
           btn.disabled = false; btn.textContent = 'ยืนยัน';
           if (res && res.ok) { isAdminUnlocked = true; adminPinCache = pin; unlockConfigUI(); closeAdminPinModal(); openConfigModal(); }
           else { errEl.textContent = (res && res.error) ? res.error : 'รหัสผ่านไม่ถูกต้อง'; errEl.classList.remove('hidden'); }
         })
-        .withFailureHandler(() => { btn.disabled = false; btn.textContent = 'ยืนยัน'; })
-        .verifyAdminPin(pin);
+        .catch(err => {
+          btn.disabled = false; btn.textContent = 'ยืนยัน';
+          errEl.textContent = err && err.message ? err.message : 'เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ';
+          errEl.classList.remove('hidden');
+        });
     }
 
     function fetchFromGoogleSheet() {
       document.getElementById('loadingOverlay').classList.remove('hidden');
       document.getElementById('errorBanner').classList.add('hidden');
       pendingMatWbsSet = null; showOnlyCompletedMatWbs = false;
-      if (typeof google === 'undefined' || !google.script || !google.script.run) {
-        document.getElementById('loadingOverlay').classList.add('hidden');
-        showError('หน้านี้ต้องรันผ่าน Google Apps Script Web App');
-        return;
-      }
-      google.script.run
-        .withSuccessHandler(res => {
+
+      callGasApi('getSheetDashboardData')
+        .then(res => {
           document.getElementById('loadingOverlay').classList.add('hidden');
           if (!res || !res.ok) { showError((res && res.error) ? res.error : 'ไม่สามารถอ่านข้อมูลจาก Google Sheets ได้'); return; }
           sheetHeaders = res.headers || []; sheetRows = res.rows || []; sh1Headers = res.sh1Headers || [];
@@ -499,11 +515,10 @@
           buildRecordsFromSheet();
           if (isAdminUnlocked && (activeConfig.colMap.wbs === undefined || activeConfig.colMap.wbs < 0)) openConfigModal();
         })
-        .withFailureHandler(err => {
+        .catch(err => {
           document.getElementById('loadingOverlay').classList.add('hidden');
           showError(err && err.message ? err.message : String(err));
-        })
-        .getSheetDashboardData();
+        });
     }
 
     function showError(msg) {
@@ -572,14 +587,16 @@
 
       const btn = document.getElementById('btnSaveConfig');
       btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
-      google.script.run
-        .withSuccessHandler(res => {
+      callGasApi('saveDashboardConfig', { configJson: JSON.stringify(activeConfig), pin: adminPinCache })
+        .then(res => {
           btn.disabled = false; btn.textContent = 'บันทึกและแสดงผลทันที';
           if (res && !res.ok) { alert(res.error || 'ไม่มีสิทธิ์บันทึก'); return; }
           closeConfigModal(); buildRecordsFromSheet();
         })
-        .withFailureHandler(() => { btn.disabled = false; btn.textContent = 'บันทึกและแสดงผลทันที'; closeConfigModal(); buildRecordsFromSheet(); })
-        .saveDashboardConfig(JSON.stringify(activeConfig), adminPinCache);
+        .catch(err => {
+          btn.disabled = false; btn.textContent = 'บันทึกและแสดงผลทันที';
+          alert('เกิดข้อผิดพลาดในการบันทึก: ' + (err && err.message ? err.message : String(err)));
+        });
     }
 
     function populateFilterOptions() {
@@ -916,18 +933,17 @@
       const btn = document.getElementById('btnToggleCompletedMat'), lbl = document.getElementById('lblBtnCompletedMat');
       btn.disabled = true; lbl.textContent = `กำลังตรวจ ${tableWbsList.length} งาน...`;
 
-      google.script.run
-        .withSuccessHandler(res => {
+      callGasApi('getWbsWithPendingMaterials', { wbsList: tableWbsList, clientSh1Map: activeConfig.sh1ColMap })
+        .then(res => {
           btn.disabled = false;
           if (!res || !res.ok) { lbl.textContent = 'งานที่เบิกพัสดุครบแล้ว'; alert((res && res.error) ? res.error : 'ไม่สามารถตรวจสอบข้อมูลจาก Sh1 ได้'); return; }
           pendingMatWbsSet = new Set((res.pendingWbsList || []).map(w => String(w).trim().toUpperCase()));
           showOnlyCompletedMatWbs = true; currentPage = 1;
           renderTable(); render5BudgetCards();
         })
-        .withFailureHandler(err => {
+        .catch(err => {
           btn.disabled = false; lbl.textContent = 'งานที่เบิกพัสดุครบแล้ว'; alert(err && err.message ? err.message : String(err));
-        })
-        .getWbsWithPendingMaterials(tableWbsList, activeConfig.sh1ColMap);
+        });
     }
 
     function renderTable() {
@@ -1030,8 +1046,8 @@
       document.getElementById('btnViewBudgetFromMat').onclick = () => { closeMaterialModal(); openDetailModal(wbsCode); };
       document.getElementById('materialModal').classList.replace('hidden', 'flex');
 
-      google.script.run
-        .withSuccessHandler(res => {
+      callGasApi('getMaterialsForWbs', { wbsCode: wbsCode, clientSh1Map: activeConfig.sh1ColMap })
+        .then(res => {
           if (!res || !res.ok) {
             document.getElementById('matModalBadge').textContent = 'ผิดพลาด';
             document.getElementById('matModalBody').innerHTML = `<div class="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-sm">${escapeHtml((res && res.error) ? res.error : 'ไม่สามารถอ่านข้อมูลจากชีต Sh1 ได้')}</div>`;
@@ -1046,11 +1062,10 @@
           }
           body.innerHTML = `<div class="border border-slate-200 rounded-xl overflow-x-auto"><table class="w-full text-left border-collapse text-sm"><thead><tr class="bg-slate-100 text-slate-700 text-xs sm:text-sm font-semibold border-b border-slate-200"><th class="py-2.5 px-3 w-12 text-center">ลำดับ</th><th class="py-2.5 px-3 whitespace-nowrap">เลขพัสดุ</th><th class="py-2.5 px-3 min-w-[200px]">ข้อความวัสดุ (Sh1)</th><th class="py-2.5 px-3 text-center whitespace-nowrap">ประเภทการเคลื่อนย้าย</th><th class="py-2.5 px-3 text-right whitespace-nowrap">ต้องการ (คอลัมน์ V)</th><th class="py-2.5 px-3 text-right whitespace-nowrap">ยอด MB52</th><th class="py-2.5 px-3 text-center whitespace-nowrap">การเคลื่อนย้ายพัสดุ</th></tr></thead><tbody class="divide-y divide-slate-100">${grouped.map((item, idx) => `<tr class="hover:bg-slate-50"><td class="py-2.5 px-3 text-center text-xs text-slate-500">${idx + 1}</td><td class="py-2.5 px-3 font-mono text-xs font-bold text-pea-800 whitespace-nowrap">${escapeHtml(item.matCode)}</td><td class="py-2.5 px-3 font-medium text-slate-800">${escapeHtml(item.matText)}</td><td class="py-2.5 px-3 text-center"><span class="px-2.5 py-0.5 rounded border font-mono text-xs font-bold bg-amber-100 text-amber-800 border-amber-200">${escapeHtml(item.moveTypesStr)}</span></td><td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-700">${fmtQty(item.totalQty)}</td><td class="py-2.5 px-3 text-right font-mono font-bold text-blue-700">${escapeHtml(item.mb52Val)}</td><td class="py-2.5 px-3 text-center whitespace-nowrap"><span class="px-2.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800 text-xs font-semibold">${escapeHtml(item.matMoveStr)}</span></td></tr>`).join('')}</tbody></table></div>`;
         })
-        .withFailureHandler(err => {
+        .catch(err => {
           document.getElementById('matModalBadge').textContent = 'ผิดพลาด';
           document.getElementById('matModalBody').innerHTML = `<div class="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-sm">${escapeHtml(err && err.message ? err.message : String(err))}</div>`;
-        })
-        .getMaterialsForWbs(wbsCode, activeConfig.sh1ColMap);
+        });
     }
 
     function closeMaterialModal() { document.getElementById('materialModal').classList.replace('flex', 'hidden'); }
@@ -1066,8 +1081,8 @@
       document.getElementById('aggModalBody').innerHTML = `<div class="py-12 text-center"><div class="w-9 h-9 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin mx-auto mb-3"></div><div class="text-sm text-slate-500">กำลังดึงและรวมยอดพัสดุจากชีต Sh1...</div></div>`;
       document.getElementById('aggMaterialModal').classList.replace('hidden', 'flex');
 
-      google.script.run
-        .withSuccessHandler(res => {
+      callGasApi('getAggregatedMaterialsForWbsList', { wbsList: wbsList, clientSh1Map: activeConfig.sh1ColMap })
+        .then(res => {
           if (!res || !res.ok) {
             document.getElementById('aggMatCountBadge').textContent = 'ผิดพลาด';
             document.getElementById('aggModalBody').innerHTML = `<div class="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-sm">${escapeHtml((res && res.error) ? res.error : 'ไม่สามารถอ่านข้อมูลจากชีต Sh1 ได้')}</div>`;
@@ -1078,11 +1093,10 @@
           document.getElementById('aggToolbar').classList.remove('hidden');
           renderAggMoveFilterBar(); renderAggMaterialTable();
         })
-        .withFailureHandler(err => {
+        .catch(err => {
           document.getElementById('aggMatCountBadge').textContent = 'ผิดพลาด';
           document.getElementById('aggModalBody').innerHTML = `<div class="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-sm">${escapeHtml(err && err.message ? err.message : String(err))}</div>`;
-        })
-        .getAggregatedMaterialsForWbsList(wbsList, activeConfig.sh1ColMap);
+        });
     }
 
     function renderAggMoveFilterBar() {
@@ -1147,4 +1161,3 @@
   </script>
 </body>
 </html>
-<!-- END OF INDEX.HTML -->
