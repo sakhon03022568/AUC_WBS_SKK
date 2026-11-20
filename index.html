@@ -69,7 +69,13 @@
            class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 via-rose-500 to-pink-500 hover:from-orange-400 hover:via-rose-400 hover:to-pink-400 text-white text-base font-display font-bold transition transform hover:-translate-y-0.5 flex items-center gap-2 shadow-xl ring-2 ring-white/85">
           <span class="text-lg">🧾</span><span>ใบตัดงบ</span><span class="text-xs opacity-90">↗</span>
         </a>
-        <span id="dataBadge" class="px-3 py-1.5 rounded-lg bg-black/20 text-purple-100 text-xs sm:text-sm border border-white/15">กำลังเชื่อมต่อ...</span>
+        <span id="dataBadge" class="hidden px-3 py-1.5 rounded-lg bg-black/20 text-purple-100 text-xs sm:text-sm border border-white/15">กำลังเชื่อมต่อ...</span>
+        <button type="button" id="sapUpdateBadge" onclick="onSapBadgeClick()" title="วันที่อัปเดตจากระบบ SAP"
+                class="px-3 py-1.5 rounded-lg bg-black/25 text-purple-50 text-xs sm:text-sm border border-white/20 flex items-center gap-1.5 transition cursor-default">
+          <span>🕒</span>
+          <span id="sapUpdateText">วันที่อัปเดตจากระบบ SAP: รอข้อมูล...</span>
+          <span id="sapEditHint" class="hidden text-xs bg-amber-400 text-pea-800 font-bold px-1.5 py-0.5 rounded">แก้ไข</span>
+        </button>
         <button type="button" onclick="fetchFromGoogleSheet()" class="px-3.5 py-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-pea-800 text-sm font-semibold transition flex items-center gap-1.5 shadow">🔄 รีเฟรชข้อมูลล่าสุด</button>
         <button type="button" id="btnConfigSheet" onclick="openConfigModal()" class="hidden px-3.5 py-2 rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm font-medium transition border border-white/20">⚙️ ตั้งค่าคอลัมน์ชีต</button>
         <button type="button" onclick="exportFilteredCsv()" class="px-3.5 py-2 rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm font-medium transition border border-white/20">📤 ส่งออก CSV</button>
@@ -202,6 +208,27 @@
     </section>
 
   </main>
+
+  <!-- Modal: Edit SAP Update Date/Time (Admin Only) -->
+  <div id="sapUpdateModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-base font-bold text-slate-800">🕒 วันที่อัปเดตจากระบบ SAP</h3>
+        <button type="button" onclick="closeSapUpdateModal()" class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+      </div>
+      <form onsubmit="saveSapUpdateDatetime(event)" class="space-y-4">
+        <div>
+          <label for="sapDatetimeInput" class="block text-sm font-semibold text-slate-700 mb-1.5">ระบุวันที่และเวลา (เฉพาะผู้ดูแลระบบ)</label>
+          <input id="sapDatetimeInput" type="datetime-local" step="1" required class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pea-600" />
+          <p class="text-xs text-slate-500 mt-1.5">แสดงผลบนแถบด้านบนขวาในรูปแบบ วว/ดด/ปปปป ชช:นน:วว</p>
+        </div>
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="closeSapUpdateModal()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">ยกเลิก</button>
+          <button id="btnSaveSapDatetime" type="submit" class="px-4 py-2 bg-pea-700 hover:bg-pea-800 text-white text-sm font-semibold rounded-lg shadow">บันทึก</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- Modal 1: Single WBS Materials -->
   <div id="materialModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
@@ -398,8 +425,9 @@
     const CONTRACTOR_COLORS = ['#74045f','#2563eb','#059669','#d97706','#dc2626','#7c3aed','#0891b2','#db2777','#65a30d','#ea580c','#4f46e5','#0d9488','#b45309','#be185d','#475569'];
 
     let isAdminUnlocked = false, adminPinCache = '';
+    let sapUpdatedAt = '';
     let sheetHeaders = [], sheetRows = [], sh1Headers = [];
-    let activeConfig = { colMap: {}, sh1ColMap: {}, only3Offices: true, dedupMode: 'first' };
+    let activeConfig = { colMap: {}, sh1ColMap: {}, only3Offices: true, dedupMode: 'first', sapUpdatedAt: '' };
     let rawRecords = [];
     let btnFilters = { year: 'ALL', office: 'ALL', sysStatus: 'ALL', execBy: 'ALL' };
     let ddFilters = { budget: 'ALL', dept: 'ALL', supervisor: 'ALL', contractor: 'ALL' };
@@ -419,6 +447,95 @@
     const fmtPct = n => Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
     const fmtQty = n => { const num = Number(n || 0); return Number.isInteger(num) ? num.toLocaleString('th-TH') : num.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
     const colIndexToLetter = idx => { let s = '', n = idx; while (n >= 0) { s = String.fromCharCode((n % 26) + 65) + s; n = Math.floor(n / 26) - 1; } return s; };
+
+    function renderSapUpdateBadge() {
+      const labelEl = document.getElementById('sapUpdateText');
+      const hintEl = document.getElementById('sapEditHint');
+      const btnEl = document.getElementById('sapUpdateBadge');
+      labelEl.textContent = 'วันที่อัปเดตจากระบบ SAP: ' + (sapUpdatedAt || '-');
+      if (isAdminUnlocked) {
+        hintEl.classList.remove('hidden');
+        btnEl.classList.add('hover:bg-black/35', 'cursor-pointer');
+        btnEl.classList.remove('cursor-default');
+      } else {
+        hintEl.classList.add('hidden');
+        btnEl.classList.remove('hover:bg-black/35', 'cursor-pointer');
+        btnEl.classList.add('cursor-default');
+      }
+    }
+
+    function onSapBadgeClick() {
+      if (!isAdminUnlocked) return;
+      openSapUpdateModal();
+    }
+
+    function toDatetimeLocalValue(displayStr) {
+      const s = String(displayStr || '').trim();
+      const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+      if (m) {
+        const dd = m[1].padStart(2, '0');
+        const mm = m[2].padStart(2, '0');
+        const yyyy = m[3];
+        const hh = m[4].padStart(2, '0');
+        const min = m[5].padStart(2, '0');
+        const sec = (m[6] || '00').padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}T${hh}:${min}:${sec}`;
+      }
+      const now = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    }
+
+    function formatDatetimeLocalToDisplay(val) {
+      const s = String(val || '').trim();
+      const m = s.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/);
+      if (!m) return s;
+      const sec = m[6] || '00';
+      return `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}:${sec}`;
+    }
+
+    function openSapUpdateModal() {
+      if (!isAdminUnlocked) return;
+      document.getElementById('sapDatetimeInput').value = toDatetimeLocalValue(sapUpdatedAt);
+      document.getElementById('sapUpdateModal').classList.replace('hidden', 'flex');
+      setTimeout(() => document.getElementById('sapDatetimeInput').focus(), 50);
+    }
+
+    function closeSapUpdateModal() {
+      document.getElementById('sapUpdateModal').classList.replace('flex', 'hidden');
+    }
+
+    function saveSapUpdateDatetime(e) {
+      e.preventDefault();
+      if (!isAdminUnlocked) return;
+      const rawVal = document.getElementById('sapDatetimeInput').value;
+      const formatted = formatDatetimeLocalToDisplay(rawVal);
+      if (!formatted) return;
+
+      const btn = document.getElementById('btnSaveSapDatetime');
+      btn.disabled = true;
+      btn.textContent = 'กำลังบันทึก...';
+
+      const nextConfig = Object.assign({}, activeConfig, { sapUpdatedAt: formatted });
+      callGasApi('saveDashboardConfig', { configJson: JSON.stringify(nextConfig), pin: adminPinCache })
+        .then(res => {
+          btn.disabled = false;
+          btn.textContent = 'บันทึก';
+          if (res && !res.ok) {
+            alert(res.error || 'ไม่มีสิทธิ์บันทึก');
+            return;
+          }
+          activeConfig = nextConfig;
+          sapUpdatedAt = formatted;
+          renderSapUpdateBadge();
+          closeSapUpdateModal();
+        })
+        .catch(err => {
+          btn.disabled = false;
+          btn.textContent = 'บันทึก';
+          alert('เกิดข้อผิดพลาดในการบันทึก: ' + (err && err.message ? err.message : String(err)));
+        });
+    }
 
     function normalizeOfficeName(val) {
       const s = String(val ?? '').trim();
@@ -466,6 +583,7 @@
     function unlockConfigUI() {
       document.getElementById('btnConfigSheet').classList.remove('hidden');
       document.getElementById('btnMatConfigLink').classList.remove('hidden');
+      renderSapUpdateBadge();
     }
 
     function openAdminPinModal() {
@@ -506,7 +624,6 @@
           document.getElementById('loadingOverlay').classList.add('hidden');
           if (!res || !res.ok) { showError((res && res.error) ? res.error : 'ไม่สามารถอ่านข้อมูลจาก Google Sheets ได้'); return; }
           sheetHeaders = res.headers || []; sheetRows = res.rows || []; sh1Headers = res.sh1Headers || [];
-          if (res.isOwner) { isAdminUnlocked = true; unlockConfigUI(); }
           const saved = res.savedConfig || {};
           const guessedSh1 = autoGuessMap(sh1Headers, SH1_FIELD_DEFS);
           const mergedSh1 = Object.assign({}, guessedSh1);
@@ -515,9 +632,13 @@
             colMap: (saved.colMap && Object.keys(saved.colMap).length) ? saved.colMap : autoGuessMap(sheetHeaders, FIELD_DEFS),
             sh1ColMap: mergedSh1,
             only3Offices: saved.only3Offices !== undefined ? saved.only3Offices : true,
-            dedupMode: saved.dedupMode || 'first'
+            dedupMode: saved.dedupMode || 'first',
+            sapUpdatedAt: saved.sapUpdatedAt || ''
           };
+          sapUpdatedAt = activeConfig.sapUpdatedAt || res.fetchedAt || '-';
           document.getElementById('dataBadge').textContent = `ชีตหลัก: ${res.tabName} • อัปเดต ${res.fetchedAt}`;
+          if (res.isOwner) { isAdminUnlocked = true; unlockConfigUI(); }
+          else { renderSapUpdateBadge(); }
           buildRecordsFromSheet();
           if (isAdminUnlocked && (activeConfig.colMap.wbs === undefined || activeConfig.colMap.wbs < 0)) openConfigModal();
         })
@@ -588,7 +709,7 @@
       const newColMap = {}; FIELD_DEFS.forEach(fd => { newColMap[fd.key] = Number(document.getElementById(`cfg_${fd.key}`).value); });
       if (newColMap.wbs < 0) { alert('กรุณาเลือกคอลัมน์ WBS ของชีต Sh2 อย่างน้อย 1 คอลัมน์'); return; }
       const newSh1Map = {}; SH1_FIELD_DEFS.forEach(fd => { newSh1Map[fd.key] = Number(document.getElementById(`cfg_sh1_${fd.key}`).value); });
-      activeConfig = { colMap: newColMap, sh1ColMap: newSh1Map, only3Offices: document.getElementById('chkOnly3Offices').checked, dedupMode: document.getElementById('dedupModeSelect').value };
+      activeConfig = { colMap: newColMap, sh1ColMap: newSh1Map, only3Offices: document.getElementById('chkOnly3Offices').checked, dedupMode: document.getElementById('dedupModeSelect').value, sapUpdatedAt: sapUpdatedAt };
       pendingMatWbsSet = null; showOnlyCompletedMatWbs = false;
 
       const btn = document.getElementById('btnSaveConfig');
@@ -695,6 +816,7 @@
         closeDetailModal();
         closeAdminPinModal();
         closeConfigModal();
+        closeSapUpdateModal();
       }
     });
 
