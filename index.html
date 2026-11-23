@@ -56,17 +56,30 @@
   </script>
 
   <header class="bg-gradient-to-r from-pea-800 via-pea-700 to-pea-600 text-white shadow-lg">
-    <div class="max-w-[1440px] mx-auto px-4 sm:px-6 py-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <div id="wbsLogoBtn" ondblclick="openAdminPinModal()" title="Dashboard WBS" class="w-12 h-12 rounded-xl bg-amber-400 text-pea-800 flex items-center justify-center font-display font-bold text-lg shadow select-none cursor-default">WBS</div>
-        <div>
-          <h1 class="text-xl sm:text-2xl font-bold tracking-tight">Dashboard_AUC_กฟจ.สกลนคร</h1>
-          <p class="text-xs sm:text-sm text-purple-100">จัดทำโดย นายเรืองศักดิ์ ไชยโคตร วศก.6 ผปบ.กฟจ.สกลนคร</p>
+    <div class="max-w-[1440px] mx-auto px-4 sm:px-6 py-4 space-y-3">
+      <div class="flex items-start sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+          <div id="wbsLogoBtn" ondblclick="openAdminPinModal()" title="Dashboard WBS" class="w-12 h-12 shrink-0 rounded-xl bg-amber-400 text-pea-800 flex items-center justify-center font-display font-bold text-lg shadow select-none cursor-default">WBS</div>
+          <div class="min-w-0">
+            <h1 class="text-lg sm:text-2xl font-bold tracking-tight truncate">Dashboard_AUC_กฟจ.สกลนคร</h1>
+            <p class="text-xs sm:text-sm text-purple-100">จัดทำโดย นายเรืองศักดิ์ ไชยโคตร วศก.6 ผปบ.กฟจ.สกลนคร</p>
+          </div>
         </div>
+        <a href="https://sakhon03022568.github.io"
+           title="กลับสู่หน้าหลัก"
+           class="shrink-0 group px-4 sm:px-5 py-2 rounded-xl bg-gradient-to-r from-white via-purple-50 to-amber-50 hover:from-amber-100 hover:via-yellow-50 hover:to-white text-pea-800 text-sm sm:text-base font-display font-bold transition-all duration-200 transform hover:-translate-y-0.5 flex items-center gap-2.5 shadow-[0_4px_18px_rgba(251,191,36,0.4)] hover:shadow-[0_6px_24px_rgba(251,191,36,0.65)] ring-2 ring-amber-300">
+          <span class="w-7 h-7 rounded-lg bg-gradient-to-br from-pea-700 to-pea-600 text-amber-300 flex items-center justify-center shadow-sm transition-transform duration-200 group-hover:scale-110">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 10.5L12 3l9 7.5M5 9.5V20a1 1 0 001 1h4.5v-5.5a1.5 1.5 0 013 0V21H18a1 1 0 001-1V9.5" />
+            </svg>
+          </span>
+          <span>หน้าหลัก</span>
+        </a>
       </div>
-      <div class="flex flex-wrap items-center gap-2.5">
+
+      <div class="flex flex-wrap items-center justify-start lg:justify-end gap-2.5 pt-3 border-t border-white/15">
         <a href="https://script.google.com/macros/s/AKfycbz3xxp5KlSL8a7LZhIccxGT25PodsKE24GKUdViMh69gXMDfNV1Lf7ns_l2NiUg3d1U/exec" target="_blank" rel="noopener noreferrer"
-           class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 via-rose-500 to-pink-500 hover:from-orange-400 hover:via-rose-400 hover:to-pink-400 text-white text-base font-display font-bold transition transform hover:-translate-y-0.5 flex items-center gap-2 shadow-xl ring-2 ring-white/85">
+           class="px-5 py-2 rounded-xl bg-gradient-to-r from-orange-500 via-rose-500 to-pink-500 hover:from-orange-400 hover:via-rose-400 hover:to-pink-400 text-white text-base font-display font-bold transition transform hover:-translate-y-0.5 flex items-center gap-2 shadow-xl ring-2 ring-white/85">
           <span class="text-lg">🧾</span><span>ใบตัดงบ</span><span class="text-xs opacity-90">↗</span>
         </a>
         <span id="dataBadge" class="hidden px-3 py-1.5 rounded-lg bg-black/20 text-purple-100 text-xs sm:text-sm border border-white/15">กำลังเชื่อมต่อ...</span>
