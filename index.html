@@ -110,7 +110,7 @@
           <span id="activeFilterCount" class="hidden text-xs px-2.5 py-0.5 rounded-full bg-pea-100 text-pea-700 font-semibold"></span>
         </div>
         <div class="flex items-center gap-2">
-          <input id="searchBox" type="text" oninput="applyFiltersAndRender()" placeholder="ค้นหา WBS / คำอธิบาย..." class="px-3.5 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pea-600 w-60" />
+          <input id="searchBox" type="text" oninput="onSearchInput(this.value)" placeholder="ค้นหา WBS / คำอธิบาย..." class="px-3.5 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pea-600 w-60" />
           <button type="button" onclick="clearAllFilters()" class="px-3.5 py-2 text-sm font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition">ล้างตัวกรองทั้งหมด</button>
         </div>
       </div>
@@ -172,12 +172,18 @@
     </section>
 
     <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      <div class="p-4 sm:p-5 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-        <div>
-          <h3 class="font-bold text-slate-800 text-lg">ตารางรายละเอียดงาน WBS (แสดงแบบไม่ซ้ำ)</h3>
-          <p id="tableInfo" class="text-xs sm:text-sm text-slate-500">แสดง 0 รายการ</p>
+      <div class="p-4 sm:p-5 border-b border-slate-200 space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 class="font-bold text-slate-800 text-lg">ตารางรายละเอียดงาน WBS (แสดงแบบไม่ซ้ำ)</h3>
+            <p id="tableInfo" class="text-xs sm:text-sm text-slate-500">แสดง 0 รายการ</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 shrink-0">
+            <input id="tableSearchBox" type="text" oninput="onSearchInput(this.value)" placeholder="ค้นหา WBS / คำอธิบาย..." class="px-3.5 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pea-600 w-60" />
+            <button type="button" onclick="clearAllFilters()" class="px-3.5 py-2 text-sm font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition whitespace-nowrap">ล้างตัวกรองทั้งหมด</button>
+          </div>
         </div>
-        <div class="flex flex-wrap items-center gap-2 text-sm">
+        <div class="flex flex-wrap items-center justify-end gap-2 text-sm">
           <button type="button" id="btnShowMaterialSummary" onclick="openAggregatedMaterialModal()" class="px-3.5 py-2 rounded-lg font-semibold bg-teal-600 hover:bg-teal-700 text-white shadow-sm transition flex items-center gap-1.5">
             <span>📦</span><span id="lblBtnMatSummary">แสดงความต้องการพัสดุ</span>
           </button>
@@ -210,6 +216,9 @@
               <th class="py-3 px-3 sortable text-right whitespace-nowrap" onclick="sortBy('laborPct')">% เบิกค่าแรง ↕</th>
               <th class="py-3 px-3 sortable text-right whitespace-nowrap" onclick="sortBy('sitePct')">% คชจ. หน้างาน ↕</th>
               <th class="py-3 px-3 sortable text-right whitespace-nowrap" onclick="sortBy('remSiteExp')">คชจ.หน้างานคงเหลือ ↕</th>
+              <th id="th_colBH" class="py-3 px-3 sortable whitespace-nowrap" onclick="sortBy('colBH')">คอลัมน์ BH ↕</th>
+              <th id="th_colBI" class="py-3 px-3 sortable whitespace-nowrap" onclick="sortBy('colBI')">คอลัมน์ BI ↕</th>
+              <th id="th_colBJ" class="py-3 px-3 sortable whitespace-nowrap" onclick="sortBy('colBJ')">คอลัมน์ BJ ↕</th>
               <th class="py-3 px-3 sortable whitespace-nowrap" onclick="sortBy('execBy')">ดำเนินการโดย ↕</th>
               <th class="py-3 px-3 sortable whitespace-nowrap" onclick="sortBy('supervisor')">ผู้ควบคุมงาน ↕</th>
             </tr>
@@ -422,6 +431,9 @@
       { key: 'remTransport', label: 'ค่าขนส่งคงเหลือ', hints: ['ขนส่งคงเหลือ', 'ค่าขนส่ง'] },
       { key: 'remMisc', label: 'ค่าเบ็ดเตล็ดคงเหลือ', hints: ['เบ็ดเตล็ดคงเหลือ', 'เบ็ดเตล็ด'] },
       { key: 'remSiteExp', label: 'คชจ.หน้างานคงเหลือ', hints: ['หน้างานคงเหลือ', 'คชจ.หน้างานคงเหลือ'] },
+      { key: 'colBH', label: 'คอลัมน์ BH (Sh2)', hints: [], preferColIndex: 59 },
+      { key: 'colBI', label: 'คอลัมน์ BI (Sh2)', hints: [], preferColIndex: 60 },
+      { key: 'colBJ', label: 'คอลัมน์ BJ (Sh2)', hints: [], preferColIndex: 61 },
       { key: 'matPct', label: 'เปอร์เซ็นต์เบิกค่าพัสดุ', hints: ['เบิกค่าพัสดุ', '% พัสดุ'] },
       { key: 'laborPct', label: 'เปอร์เซ็นต์เบิกค่าแรง', hints: ['เบิกค่าแรง', '% ค่าแรง', '%เบิกค่าแรง'] },
       { key: 'sitePct', label: 'เปอร์เซ็นต์ คชจ. หน้างาน', hints: ['คชจ. หน้างาน', 'คชจ.หน้างาน', '% คชจ'] },
@@ -460,6 +472,14 @@
     const fmtPct = n => Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
     const fmtQty = n => { const num = Number(n || 0); return Number.isInteger(num) ? num.toLocaleString('th-TH') : num.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
     const colIndexToLetter = idx => { let s = '', n = idx; while (n >= 0) { s = String.fromCharCode((n % 26) + 65) + s; n = Math.floor(n / 26) - 1; } return s; };
+
+    function getSh2HeaderLabel(colKey, fallbackLabel) {
+      const idx = (activeConfig.colMap || {})[colKey];
+      if (idx !== undefined && idx >= 0 && sheetHeaders[idx] !== undefined && String(sheetHeaders[idx]).trim() !== '') {
+        return String(sheetHeaders[idx]).trim();
+      }
+      return fallbackLabel;
+    }
 
     function renderSapUpdateBadge() {
       const labelEl = document.getElementById('sapUpdateText');
@@ -571,7 +591,7 @@
           }
         }
         let matched = -1;
-        for (const hint of fd.hints) {
+        for (const hint of (fd.hints || [])) {
           const idx = headers.findIndex(h => String(h || '').toLowerCase().includes(hint.toLowerCase()));
           if (idx >= 0) { matched = idx; break; }
         }
@@ -638,11 +658,18 @@
           if (!res || !res.ok) { showError((res && res.error) ? res.error : 'ไม่สามารถอ่านข้อมูลจาก Google Sheets ได้'); return; }
           sheetHeaders = res.headers || []; sheetRows = res.rows || []; sh1Headers = res.sh1Headers || [];
           const saved = res.savedConfig || {};
+          const guessedSh2 = autoGuessMap(sheetHeaders, FIELD_DEFS);
+          const mergedSh2 = Object.assign({}, guessedSh2);
+          if (saved.colMap) {
+            Object.keys(saved.colMap).forEach(k => {
+              if (saved.colMap[k] !== undefined) mergedSh2[k] = saved.colMap[k];
+            });
+          }
           const guessedSh1 = autoGuessMap(sh1Headers, SH1_FIELD_DEFS);
           const mergedSh1 = Object.assign({}, guessedSh1);
           if (saved.sh1ColMap) { Object.keys(saved.sh1ColMap).forEach(k => { if (saved.sh1ColMap[k] >= 0) mergedSh1[k] = saved.sh1ColMap[k]; }); }
           activeConfig = {
-            colMap: (saved.colMap && Object.keys(saved.colMap).length) ? saved.colMap : autoGuessMap(sheetHeaders, FIELD_DEFS),
+            colMap: mergedSh2,
             sh1ColMap: mergedSh1,
             only3Offices: saved.only3Offices !== undefined ? saved.only3Offices : true,
             dedupMode: saved.dedupMode || 'first',
@@ -668,6 +695,10 @@
 
     function buildRecordsFromSheet() {
       const idxMap = activeConfig.colMap || {};
+      document.getElementById('th_colBH').textContent = getSh2HeaderLabel('colBH', 'คอลัมน์ BH') + ' ↕';
+      document.getElementById('th_colBI').textContent = getSh2HeaderLabel('colBI', 'คอลัมน์ BI') + ' ↕';
+      document.getElementById('th_colBJ').textContent = getSh2HeaderLabel('colBJ', 'คอลัมน์ BJ') + ' ↕';
+
       const getVal = (row, idx, def = '-') => (idx >= 0 && row[idx] !== undefined && String(row[idx]).trim() !== '') ? String(row[idx]).trim() : def;
       let imported = sheetRows.map(r => {
         const wbsVal = getVal(r, idxMap.wbs, '');
@@ -682,6 +713,9 @@
           remTransport: idxMap.remTransport >= 0 ? parseNum(r[idxMap.remTransport]) : 0,
           remMisc: idxMap.remMisc >= 0 ? parseNum(r[idxMap.remMisc]) : 0,
           remSiteExp: idxMap.remSiteExp >= 0 ? parseNum(r[idxMap.remSiteExp]) : 0,
+          colBH: getVal(r, idxMap.colBH),
+          colBI: getVal(r, idxMap.colBI),
+          colBJ: getVal(r, idxMap.colBJ),
           matPct: idxMap.matPct >= 0 ? parseNum(r[idxMap.matPct]) : 0,
           laborPct: idxMap.laborPct >= 0 ? parseNum(r[idxMap.laborPct]) : 0,
           sitePct: idxMap.sitePct >= 0 ? parseNum(r[idxMap.sitePct]) : 0,
@@ -865,7 +899,7 @@
     const matchPctRange = (val, r) => (r.min === 0 && r.max === 100) ? true : (r.max === 100 ? val >= r.min : (val >= r.min && val <= r.max));
 
     function deduplicateByWbs(rows) {
-      const map = new Map(), metaKeys = ['year','office','title','sysStatus','userStatus','execBy','budget','dept','supervisor','contractor'];
+      const map = new Map(), metaKeys = ['year','office','title','sysStatus','userStatus','execBy','budget','dept','supervisor','contractor','colBH','colBI','colBJ'];
       const mode = activeConfig.dedupMode || 'first';
       rows.forEach(r => {
         const key = (r.wbs || '').trim(); if (!key) return;
@@ -888,6 +922,14 @@
         list = list.filter(r => selectedWbsSet.has(r.wbs));
       }
       return list;
+    }
+
+    function onSearchInput(val) {
+      const topEl = document.getElementById('searchBox');
+      const tblEl = document.getElementById('tableSearchBox');
+      if (topEl && topEl.value !== val) topEl.value = val;
+      if (tblEl && tblEl.value !== val) tblEl.value = val;
+      applyFiltersAndRender();
     }
 
     function applyFiltersAndRender() {
@@ -915,7 +957,7 @@
         if (!matchPctRange(r.matPct, sliderFilters.matPct)) return false;
         if (!matchPctRange(r.laborPct, sliderFilters.laborPct)) return false;
         if (!matchPctRange(r.sitePct, sliderFilters.sitePct)) return false;
-        if (f.search && !`${r.wbs} ${r.title} ${r.supervisor} ${r.contractor} ${r.userStatus} ${r.execBy}`.toLowerCase().includes(f.search)) return false;
+        if (f.search && !`${r.wbs} ${r.title} ${r.supervisor} ${r.contractor} ${r.userStatus} ${r.execBy} ${r.colBH} ${r.colBI} ${r.colBJ}`.toLowerCase().includes(f.search)) return false;
         return true;
       });
 
@@ -937,6 +979,8 @@
         document.getElementById(`min_${k}`).value = 0; document.getElementById(`max_${k}`).value = 100; syncSliderUI(k);
       });
       document.getElementById('searchBox').value = '';
+      const tblSearch = document.getElementById('tableSearchBox');
+      if (tblSearch) tblSearch.value = '';
       selectedWbsSet.clear(); showOnlySelectedWbs = false; showOnlyCompletedMatWbs = false;
       renderFilterButtons(); DROPDOWN_CONFIG.forEach(cfg => renderSearchableDropdown(cfg.key)); applyFiltersAndRender();
     }
@@ -1103,7 +1147,7 @@
 
       currentSortedList = [...baseList].sort((a, b) => {
         const va = a[sortState.key], vb = b[sortState.key];
-        const cmp = (typeof va === 'number' && typeof vb === 'number') ? (va - vb) : String(va ?? '').localeCompare(String(vb ?? ''), 'th');
+        const cmp = (typeof va === 'number' && typeof vb === 'number') ? (va - vb) : String(va ?? '').localeCompare(String(vb ?? ''), 'th', { numeric: true });
         return sortState.asc ? cmp : -cmp;
       });
 
@@ -1125,7 +1169,7 @@
 
       const tbody = document.getElementById('wbsTableBody');
       if (!currentPageSlice.length) {
-        tbody.innerHTML = `<tr><td colspan="12" class="py-10 text-center text-slate-400 text-base">ไม่พบข้อมูล WBS ตามเงื่อนไขที่กรอง</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="15" class="py-10 text-center text-slate-400 text-base">ไม่พบข้อมูล WBS ตามเงื่อนไขที่กรอง</td></tr>`;
       } else {
         tbody.innerHTML = currentPageSlice.map((r, i) => {
           const rowNum = start + i + 1, sysColor = getStatusColor(r.sysStatus, 0), isChecked = selectedWbsSet.has(r.wbs);
@@ -1141,6 +1185,9 @@
               <td class="py-3 px-3 text-right whitespace-nowrap font-semibold text-pea-700">${fmtPct(r.laborPct)}</td>
               <td class="py-3 px-3 text-right whitespace-nowrap font-semibold text-emerald-700">${fmtPct(r.sitePct)}</td>
               <td class="py-3 px-3 text-right whitespace-nowrap font-mono font-bold text-emerald-800">${fmtMoney(r.remSiteExp)}</td>
+              <td class="py-3 px-3 whitespace-nowrap text-slate-700">${escapeHtml(r.colBH || '-')}</td>
+              <td class="py-3 px-3 whitespace-nowrap text-slate-700">${escapeHtml(r.colBI || '-')}</td>
+              <td class="py-3 px-3 whitespace-nowrap text-slate-700">${escapeHtml(r.colBJ || '-')}</td>
               <td class="py-3 px-3 whitespace-nowrap text-slate-700">${escapeHtml(r.execBy || '-')}</td>
               <td class="py-3 px-3 whitespace-nowrap text-slate-700">${escapeHtml(r.supervisor || '-')}</td>
             </tr>
@@ -1290,8 +1337,11 @@
 
     function openDetailModal(wbsCode) {
       const r = currentFilteredUnique.find(item => item.wbs === wbsCode); if (!r) return;
+      const lblBH = getSh2HeaderLabel('colBH', 'คอลัมน์ BH');
+      const lblBI = getSh2HeaderLabel('colBI', 'คอลัมน์ BI');
+      const lblBJ = getSh2HeaderLabel('colBJ', 'คอลัมน์ BJ');
       document.getElementById('detWbs').textContent = r.wbs; document.getElementById('detTitle').textContent = r.title;
-      document.getElementById('detBody').innerHTML = `<div class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl text-sm"><div><span class="text-slate-500">กฟฟ.:</span> <b>${escapeHtml(r.office)}</b></div><div><span class="text-slate-500">งานปี พ.ศ. (U):</span> <b>${escapeHtml(r.year)}</b></div><div><span class="text-slate-500">แผนก:</span> <b>${escapeHtml(r.dept)}</b></div><div><span class="text-slate-500">งบ:</span> <b>${escapeHtml(r.budget)}</b></div><div><span class="text-slate-500">สถานะระบบ (ย่อ):</span> <b>${escapeHtml(r.sysStatus)}</b></div><div><span class="text-slate-500">สถานะผู้ใช้ (N):</span> <b>${escapeHtml(r.userStatus)}</b></div><div><span class="text-slate-500">ดำเนินการโดย:</span> <b>${escapeHtml(r.execBy)}</b></div><div><span class="text-slate-500">ผู้ควบคุมงาน:</span> <b>${escapeHtml(r.supervisor)}</b></div><div class="col-span-2"><span class="text-slate-500">ผู้รับจ้าง:</span> <b>${escapeHtml(r.contractor)}</b></div></div><div class="border border-slate-200 rounded-xl p-3 space-y-1.5 text-sm"><div class="font-bold text-slate-700 mb-1">งบประมาณคงเหลือของ WBS นี้</div><div class="flex justify-between"><span>ค่าแรงคงเหลือ</span><b>${fmtMoney(r.remLabor)}</b></div><div class="flex justify-between"><span>ค่าควบคุมงานคงเหลือ</span><b>${fmtMoney(r.remSupervision)}</b></div><div class="flex justify-between"><span>ค่าขนส่งคงเหลือ</span><b>${fmtMoney(r.remTransport)}</b></div><div class="flex justify-between"><span>ค่าเบ็ดเตล็ดคงเหลือ</span><b>${fmtMoney(r.remMisc)}</b></div><div class="flex justify-between pt-1 border-t"><span>คชจ.หน้างานคงเหลือ</span><b class="text-emerald-700">${fmtMoney(r.remSiteExp)}</b></div></div><div class="grid grid-cols-3 gap-2 text-xs"><div class="bg-blue-50 p-2.5 rounded-lg text-center"><div class="text-slate-500">เบิกค่าพัสดุ</div><div class="text-base font-bold text-blue-700">${fmtPct(r.matPct)}</div></div><div class="bg-purple-50 p-2.5 rounded-lg text-center"><div class="text-slate-500">เบิกค่าแรง</div><div class="text-base font-bold text-pea-700">${fmtPct(r.laborPct)}</div></div><div class="bg-emerald-50 p-2.5 rounded-lg text-center"><div class="text-slate-500">คชจ. หน้างาน</div><div class="text-base font-bold text-emerald-700">${fmtPct(r.sitePct)}</div></div></div>`;
+      document.getElementById('detBody').innerHTML = `<div class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl text-sm"><div><span class="text-slate-500">กฟฟ.:</span> <b>${escapeHtml(r.office)}</b></div><div><span class="text-slate-500">งานปี พ.ศ. (U):</span> <b>${escapeHtml(r.year)}</b></div><div><span class="text-slate-500">แผนก:</span> <b>${escapeHtml(r.dept)}</b></div><div><span class="text-slate-500">งบ:</span> <b>${escapeHtml(r.budget)}</b></div><div><span class="text-slate-500">สถานะระบบ (ย่อ):</span> <b>${escapeHtml(r.sysStatus)}</b></div><div><span class="text-slate-500">สถานะผู้ใช้ (N):</span> <b>${escapeHtml(r.userStatus)}</b></div><div><span class="text-slate-500">ดำเนินการโดย:</span> <b>${escapeHtml(r.execBy)}</b></div><div><span class="text-slate-500">ผู้ควบคุมงาน:</span> <b>${escapeHtml(r.supervisor)}</b></div><div class="col-span-2"><span class="text-slate-500">ผู้รับจ้าง:</span> <b>${escapeHtml(r.contractor)}</b></div><div><span class="text-slate-500">${escapeHtml(lblBH)}:</span> <b>${escapeHtml(r.colBH || '-')}</b></div><div><span class="text-slate-500">${escapeHtml(lblBI)}:</span> <b>${escapeHtml(r.colBI || '-')}</b></div><div class="col-span-2"><span class="text-slate-500">${escapeHtml(lblBJ)}:</span> <b>${escapeHtml(r.colBJ || '-')}</b></div></div><div class="border border-slate-200 rounded-xl p-3 space-y-1.5 text-sm"><div class="font-bold text-slate-700 mb-1">งบประมาณคงเหลือของ WBS นี้</div><div class="flex justify-between"><span>ค่าแรงคงเหลือ</span><b>${fmtMoney(r.remLabor)}</b></div><div class="flex justify-between"><span>ค่าควบคุมงานคงเหลือ</span><b>${fmtMoney(r.remSupervision)}</b></div><div class="flex justify-between"><span>ค่าขนส่งคงเหลือ</span><b>${fmtMoney(r.remTransport)}</b></div><div class="flex justify-between"><span>ค่าเบ็ดเตล็ดคงเหลือ</span><b>${fmtMoney(r.remMisc)}</b></div><div class="flex justify-between pt-1 border-t"><span>คชจ.หน้างานคงเหลือ</span><b class="text-emerald-700">${fmtMoney(r.remSiteExp)}</b></div></div><div class="grid grid-cols-3 gap-2 text-xs"><div class="bg-blue-50 p-2.5 rounded-lg text-center"><div class="text-slate-500">เบิกค่าพัสดุ</div><div class="text-base font-bold text-blue-700">${fmtPct(r.matPct)}</div></div><div class="bg-purple-50 p-2.5 rounded-lg text-center"><div class="text-slate-500">เบิกค่าแรง</div><div class="text-base font-bold text-pea-700">${fmtPct(r.laborPct)}</div></div><div class="bg-emerald-50 p-2.5 rounded-lg text-center"><div class="text-slate-500">คชจ. หน้างาน</div><div class="text-base font-bold text-emerald-700">${fmtPct(r.sitePct)}</div></div></div>`;
       document.getElementById('detailModal').classList.replace('hidden', 'flex');
     }
 
@@ -1299,9 +1349,12 @@
 
     function exportFilteredCsv() {
       const targetRows = selectedWbsSet.size > 0 ? currentSortedList.filter(r => selectedWbsSet.has(r.wbs)) : currentSortedList;
-      const headers = ['ลำดับที่', 'WBS', 'คำอธิบาย', 'สถานะระบบ (ย่อ)', 'สถานะผู้ใช้', 'เปอร์เซ็นต์เบิกค่าพัสดุ', 'เปอร์เซ็นต์เบิกค่าแรง', 'เปอร์เซ็นต์ คชจ. หน้างาน', 'คชจ.หน้างานคงเหลือ', 'ดำเนินการโดย', 'ผู้ควบคุมงาน'];
-      const csvLines = [headers.join(',')];
-      targetRows.forEach((r, idx) => { csvLines.push([idx + 1, r.wbs, r.title, r.sysStatus, r.userStatus, r.matPct, r.laborPct, r.sitePct, r.remSiteExp, r.execBy, r.supervisor].map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')); });
+      const lblBH = getSh2HeaderLabel('colBH', 'คอลัมน์ BH');
+      const lblBI = getSh2HeaderLabel('colBI', 'คอลัมน์ BI');
+      const lblBJ = getSh2HeaderLabel('colBJ', 'คอลัมน์ BJ');
+      const headers = ['ลำดับที่', 'WBS', 'คำอธิบาย', 'สถานะระบบ (ย่อ)', 'สถานะผู้ใช้', 'เปอร์เซ็นต์เบิกค่าพัสดุ', 'เปอร์เซ็นต์เบิกค่าแรง', 'เปอร์เซ็นต์ คชจ. หน้างาน', 'คชจ.หน้างานคงเหลือ', lblBH, lblBI, lblBJ, 'ดำเนินการโดย', 'ผู้ควบคุมงาน'];
+      const csvLines = [headers.map(h => `"${String(h).replace(/"/g, '""')}"`).join(',')];
+      targetRows.forEach((r, idx) => { csvLines.push([idx + 1, r.wbs, r.title, r.sysStatus, r.userStatus, r.matPct, r.laborPct, r.sitePct, r.remSiteExp, r.colBH, r.colBI, r.colBJ, r.execBy, r.supervisor].map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')); });
       const blob = new Blob(['\uFEFF' + csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = 'wbs-dashboard-export.csv'; a.click(); URL.revokeObjectURL(url);
